@@ -1,0 +1,61 @@
+\ *********************************************************************
+\ Calculate earthworker average   
+\   Filename:       earthWorkerAverage.txt
+\   author:         Marc PETREMANN
+\   Date:           13-april-2020
+\   MCU:            gForth
+\   GNU General Public License
+\ *********************************************************************
+
+5 constant nbValues         \ number of initials values
+\ compile initials values
+create initValues 
+    16 ,    10 ,    14 ,    11 ,   18 ,
+\ display values in array
+: .values ( adr n ---)
+    0 do
+        dup i cell * +      \ calculate address of a value
+        @ cr .              \ fetch and display value
+    loop ;
+
+\ calculate eartworker average
+create calcBuffer
+    nbValues cell * allot
+create finalValues 
+    nbValues cell * allot
+
+: finalToBuffer ( n ---)
+    cell * >r
+    finalValues calcBuffer r> cmove
+  ;
+
+variable calcDepth
+
+: calcAverage ( ---)
+    -1 calcDepth +!
+    calcDepth @  0 do
+        calcBuffer  i    cell * + @     \ get fisrt value in buffer
+        calcBuffer  i 1+ cell * + @ +   \ get second value in buffer and add
+        finalValues i    cell * + !     \ store result
+    loop
+    calcDepth @ 1 > 
+    if
+        calcDepth @ finalToBuffer
+        recurse
+    then
+  ;
+
+
+: calculate ( ---)
+    \ move initial values in buffer
+    initValues calcBuffer nbValues cell * cmove
+    nbValues calcDepth !
+    calcAverage
+  ;
+
+calculate
+
+initValues nbValues .values cr
+calcBuffer 2 .values cr
+finalValues @ . cr
+
