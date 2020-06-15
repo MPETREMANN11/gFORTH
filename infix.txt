@@ -1,0 +1,113 @@
+\ *********************************************************************
+\ convert infix to postfix notation
+\    Filename:      infix.txt
+\    Date:          13/06/2020
+\    Updated:       13/06/2020
+\    File Version:  1.0
+\    MCU:           gForth
+\    Copyright:     Marc PETREMANN
+\    Author:        Marc PETREMANN
+\    GNU General Public License
+\ *********************************************************************
+
+80 constant OPERATORS         \ increase value 80 if needed
+cell 2* OPERATORS * constant OP-SIZE
+create op               \ operator stack
+    OP-SIZE allot
+\ get current operator pointer
+: opp@    ( --- addr )
+    op dup @ + ;
+\ increase operator pointer
+: opp+ ( ---)
+    cell 2* op +!  ;
+\ decrease operator pointer
+: opp- ( ---)
+    cell 2* negate op +!  ;
+: ?interp ( cfa ---)
+    state @             \ 0 = interpret mode, -1 = compile mode
+    if      compile,    \ compile word
+    else    execute     \ execute word
+    then ;
+: >op     ( pfa level ---)
+    opp+ 
+    opp@ 2! ;
+: op>     ( ---)
+    opp@ 2@
+    opp- 
+    drop ?interp ;
+
+\ get level pointed by current operator stack
+: lev?    ( --- level)
+    opp@ @  ;
+: ]$
+    begin   lev?
+    while   op>
+    repeat
+    forth ; immediate
+
+
+
+: dealing  ( pfa --- )
+    2@
+    begin   dup lev? > invert
+    while   >r >r op> r> r>
+    repeat
+    >op ;
+
+: infix   ( n --- <word1> <word2>   in compilation )
+    '               \ get cfa word1
+    create          \ create word2
+        swap , , 
+        immediate
+    does>
+    dealing ;
+
+vocabulary algebra    algebra definitions
+7 infix * *    7 infix / /    
+6 infix + +    6 infix - -
+5 infix > >    5 infix < <    5 infix = =
+4 infix invert not
+3 infix and and
+2 infix or or
+
+: (
+    ['] cr 1 >op ; immediate
+
+: )
+    [ forth ]
+    begin   1 lev? <
+    while   op>
+    repeat
+    1 lev? =
+    if    opp-
+    else  true abort" miss " 40 emit
+    then ; immediate
+
+forth definitions
+: $[
+    op OP-SIZE 0 fill
+    algebra 
+  ; immediate
+
+
+
+
+\ examples:
+
+2 value two
+0 value result
+: ex1
+    $[ ( ( two + 3 ) * ( 4 + 1 ) ) ]$
+    to result
+    \ two 3 + 4 1 + *
+  ;
+
+: ex2 
+    $[ ( ( 2 + 3 ) * ( 4 - 1 ) / 2 ) ]$
+    \ 2 3 + 4 1 - * 2 /
+  ;
+
+: ex3
+    $[ 48 / 2 * ( 9 + 3 ) ]$ 
+    \ 48 2 / 9 3 + *
+  ;
