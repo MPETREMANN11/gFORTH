@@ -1,0 +1,182 @@
+\ *********************************************************************
+\ xxxxx
+\    Filename:      intelHex.txt
+\    Date:          22/03/2021
+\    Updated:       23/03/2021
+\    File Version:  1.0
+\    MCU:           gForth
+\    Copyright:     Marc PETREMANN
+\    Author:        Marc PETREMANN
+\    GNU General Public License
+\ *********************************************************************
+
+--check
+marker --check
+
+\ contains transient checksum value
+variable check          
+
+\ increment transient checksum value
+: check+! ( n --)      
+    check @
+    + check !
+    ;
+
+: checksum@ ( -- n)
+    check @             \ get content of transient checksum value
+    negate              \ convert in complement two value
+    $ff and             \ get low significant byte
+    0 check !           \ set transient checksum value to 0
+    ;
+
+\ checksum mechanism test 
+\ 03 + 00 + 30 + 00 + 02 + 33 + 7A = E2, checksum = 1E
+$03 check+!
+$00 check+!
+$30 check+!
+$00 check+!
+$02 check+!
+$33 check+!
+$7a check+!
+hex checksum@ .
+decimal
+
+
+\ format byte in HEX format
+: (HH) ( n -- addr c)
+    base @ >r               \ save BASE value
+    hex 0 <# # # #>         \ byte in HEX format
+    r> base !               \ restore BASE value
+    ;
+
+\ displays byte and increments transient checksum value
+: .HH ( n --)
+    dup (HH) type           \ display n in HEX format
+    check+!                 \ increment transient checksum value
+    ;
+
+\ displays double byte and increments transient checksum value
+: .HHHH ( n --)
+    $0100 /mod              \ split n in two bytes
+    .HH                     \ display MSB of n
+    .HH                     \ display LSB of n
+    ;
+
+
+\ displays checksum value
+: .CHECKSUM ( --)
+    checksum@ .HH           \ calculate and display checksum
+    0 check !               \ reinit check to 0
+    ;
+
+\ create record type value
+: recordType: ( comp: n -- <rtNAME> | exec: -- n )
+    create
+        ,
+    does>
+        @ .HH
+    ;
+
+00 recordType: rtDATA   \ DATAs
+01 recordType: rtEOF    \ End Of File
+02 recordType: rtESA    \ Extended Segment Address
+03 recordType: rtSSA    \ Start Segment Address 
+04 recordType: rtELA    \ Extended Linear Address
+05 recordType: rtSLA    \ Start Linear Address
+
+\ display EOF line
+: .EOF ( --)
+    ." :"
+    00 .HH
+    00 .HH
+    00 .HH
+    rtEOF
+    .CHECKSUM
+    ;
+
+\ display Extended Segment Address
+: .ESA ( addr --)
+    ." :"
+    02 .HH
+    00 .HH
+    00 .HH
+    rtESA
+    .HHHH
+    .CHECKSUM
+    ;
+
+\ for tests
+$2000 .ESA
+
+variable targetEND
+
+\ for tests
+create TARGET
+    hex
+    \ :10DD1000A6DD0000000000000000E60381200F9453
+    A6 c, DD c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c,  
+    00 c, 00 c, E6 c, 03 c, 81 c, 20 c, 0F c, 94 c, 
+\    2C c, 41 c, 20 c,
+    here targetEND !
+    decimal
+    
+
+variable Pointer            \ memory pointer
+
+$DD00 value offsetPointer       \ Pointer offset
+
+\ display number of data
+: .NBdata ( n --)
+    .HH
+    ;
+
+\ display pointer address
+: .ADDR ( --)
+    Pointer @
+    offsetPointer +
+    .HHHH
+    ;
+
+\ display data pointed by Pointer
+: .DATA ( n --)
+    TARGET Pointer @ + C@   \ get data
+    .HH                     \ display data
+    1 Pointer +!            \ increment Pointer
+    ;
+
+--target
+marker --target
+
+
+: .targetHex ( --)
+    cr
+    0 Pointer !
+    targetEND @
+    TARGET Pointer @ + - 
+    16 /mod                 \ Q = nb complete lines, R = 
+    0 do
+        ." :" $10 .NBdata
+        .ADDR
+        $10 0 do
+            .DATA
+        loop
+        .CHECKSUM cr
+    loop
+    dup 0> if
+        ." :" $10 .NBdata
+        .ADDR
+        $10 0 do
+            .DATA
+        loop
+        .CHECKSUM cr
+    then
+    .EOF cr
+    ;
+
+.targetHex
+
+
+
+
+    
+
