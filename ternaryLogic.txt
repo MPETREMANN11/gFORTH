@@ -1,0 +1,101 @@
+\ *********************************************************************
+\ ternary logic operators
+\    Filename:      ternaryLogic.txt
+\    Date:          24/09/2020
+\    Updated:       24/09/2020
+\    File Version:  1.0
+\    MCU:           gForth / other FORTH
+\    Copyright:     Marc PETREMANN
+\    Author:        Marc PETREMANN
+\    GNU General Public License
+\ *********************************************************************
+
+\ tfl : ternary flag
+\ tfl = 0   is FALSE  flag
+\ tfl = 1   is TRUE   flag
+\ tfl = 2   is UNKNOW flag
+
+\ convert decimal value to ternary flag
+: n>tfl ( n --- tfl)
+    dup  0= if            \ test if n equal 0
+        drop 0
+    else
+        dup  1 and 0> if  \ test if n is ODD
+            drop 1
+        else
+            drop 2        \ else n is EVEN
+        then
+    then
+  ;
+
+\ ternary OR
+: tOR ( n1 n2 --- tfl)
+    n>tfl
+    swap n>tfl
+    10 * +
+    dup 11 =   if  drop 1 exit  then
+    dup 12 =   if  drop 1 exit  then
+    dup 10 =   if  drop 1 exit  then
+    dup 21 =   if  drop 1 exit  then
+    dup 22 =   if  drop 2 exit  then
+    dup 20 =   if  drop 2 exit  then
+    dup 01 =   if  drop 1 exit  then
+    dup 02 =   if  drop 2 exit  then
+        00 =   if       0 exit  then
+  ;
+
+\ Gordon Charlton:
+\ : tor or dup 2 > if 2 - then ;
+
+
+\ ternary AND
+: tAND ( n1 n2 --- tfl)
+    n>tfl
+    swap n>tfl
+    10 * +
+    dup 11 =   if  drop 1 exit  then
+    dup 12 =   if  drop 1 exit  then
+    dup 10 =   if  drop 1 exit  then
+    dup 21 =   if  drop 1 exit  then
+    dup 22 =   if  drop 2 exit  then
+    dup 20 =   if  drop 2 exit  then
+    dup 01 =   if  drop 1 exit  then
+    dup 02 =   if  drop 2 exit  then
+        00 =   if       0 exit  then
+  ;
+
+
+
+\ ternary NOT
+: tNOT ( n1 --- tfl)
+    n>tfl
+    dup 1 =   if  drop 0 exit  then
+    dup 2 =   if  drop 2 exit  then
+        0 =   if  drop 1 exit  then
+  ;
+
+
+
+
+
+\ tOR test
+TRUE TRUE   tOR . cr    \ result: 1
+TRUE 2      tOR . cr    \ result: 1
+TRUE FALSE  tOR . cr    \ result: 1
+2 TRUE      tOR . cr    \ result: 1
+2 2         tOR . cr    \ result: 2
+2 FALSE     tOR . cr    \ result: 2
+FALSE TRUE  tOR . cr    \ result: 1
+FALSE 2     tOR . cr    \ result: 2
+FALSE FALSE tOR . cr    \ result: 0
+
+\ tAND test
+TRUE TRUE   tAND . cr    \ result: 1
+TRUE 2      tAND . cr    \ result: 2
+TRUE FALSE  tAND . cr    \ result: 0
+2 TRUE      tAND . cr    \ result: 2
+2 2         tAND . cr    \ result: 2
+2 FALSE     tAND . cr    \ result: 0
+FALSE TRUE  tAND . cr    \ result: 0
+FALSE 2     tAND . cr    \ result: 0
+FALSE FALSE tAND . cr    \ result: 0
