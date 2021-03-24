@@ -116,7 +116,7 @@ create TARGET
     \ :10DD1000A6DD0000000000000000E60381200F9453
     A6 c, DD c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c,  
     00 c, 00 c, E6 c, 03 c, 81 c, 20 c, 0F c, 94 c, 
-\    2C c, 41 c, 20 c,
+    2C c, 41 c, 20 c,
     here targetEND !
     decimal
     
@@ -148,35 +148,33 @@ $DD00 value offsetPointer       \ Pointer offset
 marker --target
 
 
+\ display n datas
+: .nDATAS ( n --)
+    0 do
+        .DATA
+    loop
+    ;
+
 : .targetHex ( --)
     cr
     0 Pointer !
     targetEND @
-    TARGET Pointer @ + - 
-    16 /mod                 \ Q = nb complete lines, R = 
+    TARGET Pointer @ + -
+    16 /mod                 \ Q = nb complete lines, R =
     0 do
         ." :" $10 .NBdata
         .ADDR
-        $10 0 do
-            .DATA
-        loop
+        $10 .nDATAS
         .CHECKSUM cr
     loop
-    dup 0> if
+    ?dup if
         ." :" $10 .NBdata
         .ADDR
-        $10 0 do
-            .DATA
-        loop
+        .nDATAS
         .CHECKSUM cr
     then
     .EOF cr
     ;
 
+$DD10 to offsetPointer
 .targetHex
-
-
-
-
-    
-
