@@ -1,0 +1,26 @@
+\ *********************************************************************
+\ Meta compiler for generating FlashForth code                        *
+\    Filename:      meta.txt                                          *
+\    Date:          26.03.2021                                        *
+\    MCU:           gForth                                            *
+\    Copyright:     Marc PETREMANN                                    *
+\    Author:        Marc PETREMANN                                    *
+\ *********************************************************************
+
+\ meta contains the meta-compiler
+vocabulary meta               
+meta definitions
+also meta 
+
+
+\ Variables and work options for metacompiler
+variable    WIDTH     31 WIDTH !  \ Headers: nfa size
+variable    LAST-T                \ Latest nfa compiled
+variable    CONTEXT-T             \ context metavocabulary
+variable    CURRENT-T             \ current metavocabulary
+variable    CHECKING              \ Compilation asservie
+variable    FORCE                 \ Forced compilation
+variable    VALID     VALID on    \ Validity of current definition
+variable    OLD-T                 \ Old position in target
+variable    SAVING    SAVING on   \ Saving option
+
