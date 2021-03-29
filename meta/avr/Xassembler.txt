@@ -6,6 +6,7 @@
 \    Copyright:     Mikael Nordman                                    *
 \    Author:        Mikael Nordman                                    *
 \ adapted for gForth by Marc PETREMANN 26.03.2021
+\    Updated:       29.09.2019                                        *
 \ *********************************************************************
 \    FlashForth is licensed acording to the GNU General Public License*
 \ *********************************************************************
@@ -13,8 +14,19 @@
 
 \ define Xassembler vocabulary
 vocabulary Xassembler
+defined meta [if]
+    meta also meta definitions
+    \ immediate version selection Xassembler voc.
+    : [Xassembler] ( ---)          
+        Xassembler
+    ; immediate
+[then]
+
 Xassembler definitions
-also Xassembler
+
+\ defered version of , and c,
+defer ,
+defer c,
 
 : i,
     , ;
@@ -22,6 +34,9 @@ also Xassembler
     ;
 : ram
     ;
+
+\ OFLASH  constant pfl
+\ RAMPZV  constant zfl     \ value [0..3]
 
 
 \ Combine the opcode with the operand fields
