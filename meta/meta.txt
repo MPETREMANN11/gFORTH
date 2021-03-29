@@ -1,7 +1,8 @@
 \ *********************************************************************
-\ Meta compiler for generating FlashForth code                        *
+\ Meta compiler for generating Xross compiled code                    *
 \    Filename:      meta.txt                                          *
 \    Date:          26.03.2021                                        *
+\    Updated:       29.03.2021                                        *
 \    MCU:           gForth                                            *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
@@ -9,8 +10,22 @@
 
 \ meta contains the meta-compiler
 vocabulary meta               
-meta definitions
-also meta 
+    meta also meta definitions
+
+\ immediate version of only for vocabulary chaining
+: [only] ( ---)               
+    only 
+; immediate
+
+\ immediate version of forth for vocabulary chaining
+: [forth] ( ---)
+    forth
+; immediate
+
+\ immediate version of meta for vocabulary chaining
+: [meta] ( ---)               
+    meta
+; immediate
 
 
 \ Variables and work options for metacompiler
