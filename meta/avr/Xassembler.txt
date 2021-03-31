@@ -1,12 +1,12 @@
 \ *********************************************************************
 \    Filename:      Xassembler.txt  - previously asm.txt              *
-\    Date:          03.02.2014                                        *
+\    Date:          10.09.2019                                        *
 \    FF Version:    5.0                                               *
 \    MCU:           Atmega -- gForth                                  *
 \    Copyright:     Mikael Nordman                                    *
 \    Author:        Mikael Nordman                                    *
-\ adapted for gForth by Marc PETREMANN 26.03.2021
-\    Updated:       29.09.2019                                        *
+\ adapted for gForth by Marc PETREMANN 26.03.2021                     *
+\    Updated:       31.03.2021                                        *
 \ *********************************************************************
 \    FlashForth is licensed acording to the GNU General Public License*
 \ *********************************************************************
@@ -14,6 +14,7 @@
 
 \ define Xassembler vocabulary
 vocabulary Xassembler
+
 defined meta [if]
     meta also meta definitions
     \ immediate version selection Xassembler voc.
@@ -24,19 +25,23 @@ defined meta [if]
 
 Xassembler definitions
 
+: (,)
+     ,   ;
+
+: (c,)
+     c,   ;
+
 \ defered version of , and c,
 defer ,
 defer c,
 
-: i,
-    , ;
-: flash
-    ;
-: ram
-    ;
+' (c,)  is c,
+' (,)   is ,
+
 
 \ OFLASH  constant pfl
 \ RAMPZV  constant zfl     \ value [0..3]
+
 
 
 \ Combine the opcode with the operand fields
@@ -45,10 +50,10 @@ defer c,
 
 \ Fetch src and mask from addr and append to dictinary via mask
 : mask,  ( dest1 addr -- )
-    2@ swap mask! i, ;
+    2@ swap mask! , ;
 
-\ Create name and data fields for opcode and mask in flash
-: create,, flash create , , ram ;
+\ Create name and data fields for opcode and mask
+: create,,  create , ,  ;
 
 : Rd,Rr:    ( Rd Rr opcode mask -- xxxz.xxrd.dddd.rrrr )
   create,,
@@ -57,7 +62,7 @@ defer c,
     swap $4 lshift $1f0 and            \ -- rr 0ddddd0000
     or r> 2@ mask!              \ -- ddrr opcode mask mask!
     dup $fc07 and $9000 =
-    if $efff and then i, ;             \ if Z or Y then z=0
+    if $efff and then , ;             \ if Z or Y then z=0
 
 : Rd:        ( Rd opcode mask -- xxxx.xxxd.dddd.xxxx )
   create,,
@@ -71,7 +76,7 @@ defer c,
   does> >r
     $ff and dup $4 lshift or $f0f and  \ -- Rd kkkk0000kkkk
     swap $4 lshift $f0 and             \ -- kk dddd0000
-    or r> mask, ;              \ kkdd opcode mask mask! to flash
+    or r> mask, ;              \ kkdd opcode mask mask! 
 
 \ Operands Rd,Rr,constant 6bit
 : Rd,Rr+q:  ( Rd Rr k6 opcode mask -- xxkx.kkxd.dddd.rkkk )
@@ -81,7 +86,7 @@ defer c,
     dup $1000 and $1 lshift or or $2c07 and  \ -- Rd Rr kxkkxxxxxxxkkk
     rot $4 lshift $1f0 and              \ -- Rr kk ddddd0000
     or swap 8 and                       \ -- kkdd rxxx
-    or r> mask, ;                 \ kkddrr opcode mask mask! to flash
+    or r> mask, ;                 \ kkddrr opcode mask mask! 
 
 
 \ Operands Rw pair,constant 6bit
@@ -91,14 +96,14 @@ defer c,
     $3f and dup $2 lshift $c0 and      \ -- Rw k6 kk000000
     swap $f and or                     \ -- Rw kk00kkkk
     swap $4 lshift $30 and             \ -- kk ww0000
-    or r> mask, ;                      \ kkww opcode mask mask! to flash
+    or r> mask, ;                      \ kkww opcode mask mask! 
 
 \ Operands P-port,bit
 : P,b:      ( P b opcode mask -- xxxx.xxxx.PPPP.Pbbb )
   create,,
   does> >r
     $7 and swap $3 lshift              \ -- 0bbb PPPPP000
-    or r> mask, ;                      \ PPbb opcode mask mask! to flash
+    or r> mask, ;                      \ PPbb opcode mask mask! 
 
 \ Operands Rd,P-port
 : Rd,P:     ( Rd P opcode mask -- xxxx.xPPd.dddd.PPPP )
@@ -106,7 +111,7 @@ defer c,
   does> >r
     $3f and dup $5 lshift or $60f and  \ -- Rd PP00000PPPP
     swap $4 lshift $1f0 and            \ -- PP 00ddddd0000
-    or r> mask, ;                      \ ddPP opcode mask mask! to flash
+    or r> mask, ;                      \ ddPP opcode mask mask! 
 
 
 \ Operand k16 k6
@@ -114,11 +119,11 @@ defer c,
   create,,
   does> >r
     dup $1 and swap $3 lshift          \ -- 000k kkkkkk000
-    or r> mask,  i, ;                  \ k16 kk opcode mask mask! to flash
+    or r> mask,  , ;                  \ k16 kk opcode mask mask! 
 
-\ Opcode only to flash
+\ Opcode 
 : op:       ( opcode -- )
-  flash create , ram does> @ i, ;
+   create ,  does> @ , ;
 
 hex
 0100 ff00 Rd,Rr: movw_
@@ -158,14 +163,14 @@ e000 f000  Rd,k: ldi,
 
 9000 fe00  Rd,Rr: ld,  ( Rd Rr -- ) \ Rr={Z+,-Z,Y+,-Y,X+,-X,X,Y,Z}
 9000 fe0f  Rd: lds_
-: lds,     swap lds_ i, ;       \ Rd k16 -- )
+: lds,     swap lds_ , ;       \ Rd k16 -- )
 
 9004 fe0f  Rd,Rr: lpm,  ( Rd Rr -- ) \ Rr={Z,Z+}, 2 Z+ lpm,
 9006 fe0e  Rd,Rr: elpm,  ( Rd Rr -- ) \ Rr={Z,Z+}
 9200 fe00  Rd,Rr: st,  ( Rr Rd -- ) \ Rd={Z+,-Z,Y+,-Y,X+,-X,X,Y,Z}
 
 9200 fe0f  Rd: sts_
-: sts, sts_ i,  ;        ( k16 Rd -- ) \ FFFF 2 sts, adr(FFFF)<--R2
+: sts, sts_ ,  ;        ( k16 Rd -- ) \ FFFF 2 sts, adr(FFFF)<--R2
 
 : lsl,    dup add, ;           \ Rd --
 : rol,    dup adc, ;           \ Rd --
@@ -199,7 +204,7 @@ e000 f000  Rd,k: ldi,
 
 9488 op: clc,                  \ --
 94d8 op: clh,                  \ --
-94d8 op: cli,                  \ --
+94f8 op: cli,                  \ --
 94a8 op: cln,                  \ --
 94c8 op: cls,                  \ --
 94e8 op: clt,                  \ --
@@ -231,8 +236,8 @@ fe00 fe08  Rd,Rr: sbrs, \ Rd b --
 
 940c fe0e   k22: jmp,   ( k16 k6 -- ) \ k6=0 for 16b addr
 940e fe0e   k22: call,  ( k16 k6 -- ) \ k6=0 for 16b addr
-: rjmp,   c000 f000  mask! i, ; ( k12 -- )
-: rcall,  d000 f000  mask! i, ; ( k12 -- )
+: rjmp,   c000 f000  mask! , ; ( k12 -- )
+: rcall,  d000 f000  mask! , ; ( k12 -- )
 
 
 f008 constant cs,   \ if/until carry set
@@ -247,12 +252,17 @@ f00f constant ie,   \ if/until interrupt enabled
 
 : not, 0400 xor ;   \ Invert the condition code
 
-: if, ( cc -- addr) i, [ ' if #8 + pfl - zfl d2/ jmp, ] ;
+\ @TODO: à adapter au contexte gForth
+\ : if, ( cc -- addr)
+\    , [ ' if #8 + pfl - zfl d2/ jmp, ] 
+\    ;
 : else, postpone else ;
 : then, postpone then ;
 : begin, postpone begin ;
-: until, ( addr cc -- ) i, postpone again ;
-: again, ( addr -- ) postpone again ;
+: until, ( addr cc -- ) 
+    , postpone again ;
+: again, ( addr -- ) 
+    postpone again ;
 
 $00 constant Z
 $01 constant Z+
@@ -305,3 +315,21 @@ $0e constant -X
 01  constant XH:XL  \ XH:XL 3F adiw, sbiw,
 02  constant YH:YL
 03  constant ZH:ZL
+
+
+\ for testing Xassembler
+: .HH ( c --)
+    base @ >r
+    s>d <# # # #> type 
+    r> base ! ;
+    
+: .HHHH ( n --)
+    base @ >r
+    s>d <# # # # # #> type 
+    r> base ! ;
+
+
+' .HH   is c,
+' .HHHH is ,
+
+
