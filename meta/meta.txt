@@ -2,7 +2,7 @@
 \ Meta compiler for generating Xcross compiled code                   *
 \    Filename:      meta.txt                                          *
 \    Date:          26.03.2021                                        *
-\    Updated:       08.04.2021                                        *
+\    Updated:       09.04.2021                                        *
 \    MCU:           gForth                                            *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
@@ -10,17 +10,17 @@
 
 
 
-\ the TARGET vocabulary receives the headers of the 
+\ the TARGET vocabulary receives the headers of the
 \ words to be compiled in the target
-vocabulary target             
+vocabulary target
 
-\ the TRANSITION vocabulary receives words with 
+\ the TRANSITION vocabulary receives words with
 \ immediate action during meta-compilation
-vocabulary transition    
+vocabulary transition
 
-\ the FORWARD vocabulary receives the headers 
-\ of the reference words before 
-vocabulary forward            
+\ the FORWARD vocabulary receives the headers
+\ of the reference words before
+vocabulary forward
 
 vocabulary user
 
@@ -29,16 +29,13 @@ vocabulary Xassembler
 \ include avr/Xassembler.txt
 
 \ meta contains the meta-compiler
-\ only forth
-\ forth definitions
-vocabulary meta 
-\     also meta
+vocabulary meta
     meta definitions
 
 
 \ immediate version of only for vocabulary chaining
-: [only] ( ---)               
-    only 
+: [only] ( ---)
+    only
 ; immediate
 
 \ immediate version of forth for vocabulary chaining
@@ -47,12 +44,12 @@ vocabulary meta
 ; immediate
 
 \ immediate version of meta for vocabulary chaining
-: [meta] ( ---)               
+: [meta] ( ---)
     meta
 ; immediate
 
 \ immediate version of Xassembler for vocabulary chaining
-: [Xassembler] ( ---)          
+: [Xassembler] ( ---)
     Xassembler
 ; immediate
 
@@ -83,7 +80,7 @@ switch                            ( redefine itself)
 
 
 
-only forth also meta also  
+only forth also meta also
 root definitions
 \ tous les mots qui suivent sont également redéfinis dans ROOT
 : meta
@@ -105,10 +102,58 @@ root definitions
   Xassembler ;
 
 
-only forth also meta also 
+only forth also meta also
 meta definitions
 \ the following words are defined in the META vocabulary
 : in-target  ( -- )             \ strength definition of words in target
     only target definitions     \ search order limited to ROOT and target
+    ;
+
+
+
+\ force definition of words in target
+: in-transition  ( -- )
+    only forward also           \ search order:
+    target definitions          \ TRANSITION TARGET FORWARDS
+    also  transition
+    ;
+
+\ word definition strength in META
+: in-meta  ( -- )
+    only forth also             \ search order:
+    meta definitions also       \ META FORTH
+    ;
+
+\ word definition strength in FORWARDS
+: in-forward  ( -- )
+    forward definitions         \ order of words starting with FORWARDS
+    ;
+
+
+\ Memory access variables in the target
+variable ADR-T                  \ memorize target address; ADRment-Target
+variable DP-T                   \ and Target offset;  Dict.Pointer-Target
+
+
+\ In little-endian system, stores least-significant byte at smallest address
+variable LITTLE-ENDIAN          \ if true, for 16 bit word, addr = LSB, addr+1 = MSB
+true LITTLE-ENDIAN !            \ little-endian model by default, used by Intel processors
+
+
+\ get a byte in the target
+: c@-t  ( taddr -- char )
+    ADR-T @ + c@
+    ;
+
+\ get a 16-bit word from the target
+: @-t  ( taddr -- n )
+    ADR-T @ + dup c@
+    swap 1+ c@
+    LITTLE-ENDIAN @ if
+        $100 *
+    else
+        swap $100 *
+    then
+    +
     ;
 
