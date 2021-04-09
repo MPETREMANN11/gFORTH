@@ -6,23 +6,26 @@
 \    Copyright:     Mikael Nordman                                    *
 \    Author:        Mikael Nordman                                    *
 \ adapted for gForth by Marc PETREMANN 26.03.2021                     *
-\    Updated:       31.03.2021                                        *
+\    Updated:       08.04.2021                                        *
 \ *********************************************************************
 \    FlashForth is licensed acording to the GNU General Public License*
 \ *********************************************************************
 \ FlashForth assembler for Atmega chips
 
 \ define Xassembler vocabulary
-vocabulary Xassembler
-
-defined meta [if]
-    meta also meta definitions
-    \ immediate version selection Xassembler voc.
-    : [Xassembler] ( ---)          
-        Xassembler
-    ; immediate
+defined Xassembler invert [if]
+    vocabulary Xassembler
 [then]
 
+\ defined meta [if]
+\     meta also meta definitions
+\     \ immediate version selection Xassembler voc.
+\     : [Xassembler] ( ---)          
+\         Xassembler
+\     ; immediate
+\ [then]
+
+also Xassembler 
 Xassembler definitions
 
 : (,)
@@ -317,7 +320,60 @@ $0e constant -X
 03  constant ZH:ZL
 
 
+\ *** clone assembly directives ***********************************
+
+\ Defines a symbol and sets its value 
+\ later changes of this value remain possible, syntax: 
+\ 1234 .equ test
+: .equ  ( comp: n -- <name> | exec: -- n)
+    >in @ >r
+    bl word
+    count 2dup
+    find-name       \ leave nfa or 0
+    ?dup            
+    if              \ word defined
+        r> drop
+        name>int    \ nfa > cfa
+        16 + >r     \ cfa > pfa
+        2drop r> !  \ store value         
+    else            \ word undefined
+        drop
+        r> >in !
+        drop value
+    then
+    ;
+
+\ Defines a synonym for a register, syntax:
+\ R16 .def MyReg
+: .def  ( comp: n -- <name> | exec: -- n)
+    value
+    ;
+
+\ Fixes the value of a symbole
+\ later redefinition is not possible, syntax:
+\ 123 .set ONE_TWO_THREE 
+: .set ( comp: n -- <name> | exec: -- n)
+    constant
+    ;
+
+\ *** MACROS definitions *********
+
+: .macro ( exec: -- <name>)
+    : 
+    ;
+
+: .endmacro ( --)
+    postpone ; 
+    ; immediate
+
+
+\ *** END MACROS definitions ****
+
+
 \ for testing Xassembler
+: >lower ( c1 -- c2 )
+    dup 'A' 'Z' 1+ within bl and or ;
+
 : .HH ( c --)
     base @ >r
     s>d <# # # #> type 
@@ -332,4 +388,5 @@ $0e constant -X
 ' .HH   is c,
 ' .HHHH is ,
 
-
+\ *** End of File ***********************
+s" Xassembler.txt loaded" cr type
