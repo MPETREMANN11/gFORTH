@@ -1,16 +1,40 @@
 \ *********************************************************************
-\ Meta compiler for generating Xross compiled code                    *
+\ Meta compiler for generating Xcross compiled code                   *
 \    Filename:      meta.txt                                          *
 \    Date:          26.03.2021                                        *
-\    Updated:       29.03.2021                                        *
+\    Updated:       08.04.2021                                        *
 \    MCU:           gForth                                            *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
 \ *********************************************************************
 
+
+
+\ the TARGET vocabulary receives the headers of the 
+\ words to be compiled in the target
+vocabulary target             
+
+\ the TRANSITION vocabulary receives words with 
+\ immediate action during meta-compilation
+vocabulary transition    
+
+\ the FORWARD vocabulary receives the headers 
+\ of the reference words before 
+vocabulary forward            
+
+vocabulary user
+
+vocabulary Xassembler
+\ s" avr/Xassembler.txt" included
+\ include avr/Xassembler.txt
+
 \ meta contains the meta-compiler
-vocabulary meta               
-    meta also meta definitions
+\ only forth
+\ forth definitions
+vocabulary meta 
+\     also meta
+    meta definitions
+
 
 \ immediate version of only for vocabulary chaining
 : [only] ( ---)               
@@ -27,15 +51,64 @@ vocabulary meta
     meta
 ; immediate
 
+\ immediate version of Xassembler for vocabulary chaining
+: [Xassembler] ( ---)          
+    Xassembler
+; immediate
 
-\ Variables and work options for metacompiler
-variable    WIDTH     31 WIDTH !  \ Headers: nfa size
-variable    LAST-T                \ Latest nfa compiled
-variable    CONTEXT-T             \ context metavocabulary
-variable    CURRENT-T             \ current metavocabulary
-variable    CHECKING              \ Compilation asservie
-variable    FORCE                 \ Forced compilation
-variable    VALID     VALID on    \ Validity of current definition
-variable    OLD-T                 \ Old position in target
-variable    SAVING    SAVING on   \ Saving option
+
+\ : switch  ( -- )
+\   noop                            ( Context )
+\   noop                            ( Current )
+\   does>
+\     dup @ context @ swap context !
+\     over ! 2 +   \ ?? @TODO: 2 + or CELL + ??
+\     dup @ current @ swap current !
+\     swap !  ;
+
+
+: switch  ( -- )
+  0 ,                            ( Context )
+  0 ,                            ( Current )
+  does>
+    dup @ context @ swap context !
+    over ! cell +   \ ?? @TODO: 2 + or CELL + ??
+    dup @ current @ swap current !
+    swap !  ;
+
+
+
+switch                            ( redefine itself)
+
+
+
+
+only forth also meta also  
+root definitions
+\ tous les mots qui suivent sont également redéfinis dans ROOT
+: meta
+  meta ;
+
+: target
+  target ;
+
+:  transition
+   transition ;
+
+: forward
+  forward ;
+
+: USER
+  USER ;
+
+: Xassembler
+  Xassembler ;
+
+
+only forth also meta also 
+meta definitions
+\ the following words are defined in the META vocabulary
+: in-target  ( -- )             \ strength definition of words in target
+    only target definitions     \ search order limited to ROOT and target
+    ;
 
