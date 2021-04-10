@@ -2,7 +2,7 @@
 \ Meta compiler for generating Xcross compiled code                   *
 \    Filename:      meta.txt                                          *
 \    Date:          26.03.2021                                        *
-\    Updated:       09.04.2021                                        *
+\    Updated:       10.04.2021                                        *
 \    MCU:           gForth                                            *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
@@ -134,26 +134,32 @@ meta definitions
 variable ADR-T                  \ memorize target address; ADRment-Target
 variable DP-T                   \ and Target offset;  Dict.Pointer-Target
 
-
-\ In little-endian system, stores least-significant byte at smallest address
-variable LITTLE-ENDIAN          \ if true, for 16 bit word, addr = LSB, addr+1 = MSB
-true LITTLE-ENDIAN !            \ little-endian model by default, used by Intel processors
-
-
 \ get a byte in the target
-: c@-t  ( taddr -- char )
+: c@-t  ( taddr -- c )
     ADR-T @ + c@
     ;
 
 \ get a 16-bit word from the target
-: @-t  ( taddr -- n )
-    ADR-T @ + dup c@
-    swap 1+ c@
-    LITTLE-ENDIAN @ if
-        $100 *
-    else
-        swap $100 *
-    then
-    +
+: @-t  ( taddr -- w )
+    dup 1+ c@-t $100 *
+    swap c@-t +
+    byte-invert
     ;
 
+\ get 32-bit value in the target - unused
+\ : d@-t  ( taddr -- d )
+\   **** @TODO: à écrire ****
+\ ;
+
+\ store a byte in the target
+: c!-t  ( char taddr -- )
+    ADR-T @ + c!
+    ;
+
+\ store a 16-bit word in the target
+: !-t  { word taddr -- }    \ caution: local variables
+    word byte-invert
+    $100 /mod swap
+    taddr c!-t
+    taddr 1+ c!-t
+    ;
