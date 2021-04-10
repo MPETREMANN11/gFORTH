@@ -1,0 +1,64 @@
+\ *********************************************************************
+\ EXTEND gForth dictionnary with words used in meta.txt               *
+\    Filename:      forthExtend.txt                                   *
+\    Date:          10.04.2021                                        *
+\    Updated:       10.04.2021                                        *
+\    MCU:           gForth                                            *
+\    Copyright:     Marc PETREMANN                                    *
+\    Author:        Marc PETREMANN                                    *
+\ *********************************************************************
+
+
+\ In little-endian system, stores least-significant byte at smallest address
+\ if true, for 16 bit word, addr = LSB, addr+1 = MSB
+\ little-endian model by default, used by Intel processors
+true value LITTLE-ENDIAN
+
+\ invert byte of 16 bits word if not little-endian system
+: byte-invert ( w -- w')
+    LITTLE-ENDIAN invert if
+        $100 /mod
+        swap $100 * +
+    then
+    ;
+
+
+\ multi language support, only one language is true
+true  value ENGLISH
+false value FRENCH
+false value GERMAN
+
+\ condtionnal compilation
+: ?\  ( fl -- )
+    0=
+    if
+        postpone \
+    then
+; immediate
+
+\ Example:
+\   cr FRENCH  ?\ ." Dernière adresse cible:   "
+\      ENGLISH ?\ ." Latest target adress:     "
+\      GERMAN  ?\ ." Letzte TARGET Adresse:    "
+
+
+
+\ Strings extension
+: string ( comp: -- <name> | exec: -- addr)
+    create
+        0 , 0 ,
+    ;
+
+: $! ( addr len strVar --)
+    2!
+    ;
+
+: $@ ( strVar -- addr len )
+    2@
+    ;
+
+\ example:
+\ string TARGET$
+\ s" KERNEL.COM" TARGET$ $!
+\ TARGET$ $@ type
+
