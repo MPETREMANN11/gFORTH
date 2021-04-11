@@ -6,7 +6,7 @@
 \    Copyright:     Mikael Nordman                                    *
 \    Author:        Mikael Nordman                                    *
 \ adapted for gForth by Marc PETREMANN 26.03.2021                     *
-\    Updated:       08.04.2021                                        *
+\    Updated:       11.04.2021                                        *
 \ *********************************************************************
 \    FlashForth is licensed acording to the GNU General Public License*
 \ *********************************************************************
@@ -376,13 +376,14 @@ $0e constant -X
 
 : .HH ( c --)
     base @ >r
-    s>d <# # # #> type 
+    s>d <# # # #> type space
     r> base ! ;
     
 : .HHHH ( n --)
     base @ >r
-    s>d <# # # # # #> type 
+    s>d <# # # # # #> type space
     r> base ! ;
+
 
 
 ' .HH   is c,
