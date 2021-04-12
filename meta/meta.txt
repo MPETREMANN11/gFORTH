@@ -2,7 +2,7 @@
 \ Meta compiler for generating Xcross compiled code                   *
 \    Filename:      meta.txt                                          *
 \    Date:          26.03.2021                                        *
-\    Updated:       10.04.2021                                        *
+\    Updated:       12.04.2021                                        *
 \    MCU:           gForth                                            *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
@@ -22,7 +22,7 @@ vocabulary transition
 \ of the reference words before
 vocabulary forward
 
-vocabulary user
+vocabulary Xuser
 
 vocabulary Xassembler
 \ s" avr/Xassembler.txt" included
@@ -53,27 +53,14 @@ vocabulary meta
     Xassembler
 ; immediate
 
-
-\ : switch  ( -- )
-\   noop                            ( Context )
-\   noop                            ( Current )
-\   does>
-\     dup @ context @ swap context !
-\     over ! 2 +   \ ?? @TODO: 2 + or CELL + ??
-\     dup @ current @ swap current !
-\     swap !  ;
-
-
 : switch  ( -- )
   0 ,                            ( Context )
   0 ,                            ( Current )
   does>
     dup @ context @ swap context !
-    over ! cell +   \ ?? @TODO: 2 + or CELL + ??
+    over ! cell +   \ ??    2 + or CELL + ??
     dup @ current @ swap current !
     swap !  ;
-
-
 
 switch                            ( redefine itself)
 
@@ -82,61 +69,74 @@ switch                            ( redefine itself)
 
 only forth also meta also
 root definitions
-\ tous les mots qui suivent sont également redéfinis dans ROOT
+\ all the following words are also redefined in ROOT
 : meta
-  meta ;
+    meta ;
 
 : target
-  target ;
+    target ;
 
 :  transition
-   transition ;
+    transition ;
 
 : forward
-  forward ;
+    forward ;
 
-: USER
-  USER ;
+: Xuser
+    Xuser ;
 
 : Xassembler
-  Xassembler ;
+    Xassembler ;
 
 
 only forth also meta also
 meta definitions
 \ the following words are defined in the META vocabulary
-: in-target  ( -- )             \ strength definition of words in target
-    only target definitions     \ search order limited to ROOT and target
+: in-target  ( -- )                 \ strength definition of words in target
+    only target definitions         \ search order limited to ROOT and target
     ;
 
 
 
 \ force definition of words in target
 : in-transition  ( -- )
-    only forward also           \ search order:
-    target definitions          \ TRANSITION TARGET FORWARDS
+    only forward also               \ search order:
+    target definitions              \ TRANSITION TARGET FORWARDS
     also  transition
     ;
 
 \ word definition strength in META
 : in-meta  ( -- )
-    only forth also             \ search order:
-    meta definitions also       \ META FORTH
+    only forth also                 \ search order:
+    meta definitions also           \ META FORTH
     ;
+
+\ word definition strength in Xassembler
+: in-Xassembler  ( -- )
+    only forth also                 \ search order:
+    Xassembler definitions also     \ META FORTH
+    ;
+
+
 
 \ word definition strength in FORWARDS
 : in-forward  ( -- )
-    forward definitions         \ order of words starting with FORWARDS
+    forward definitions             \ order of words starting with FORWARDS
     ;
 
 
 \ Memory access variables in the target
-variable ADR-T                  \ memorize target address; ADRment-Target
-variable DP-T                   \ and Target offset;  Dict.Pointer-Target
+variable ADR-T                      \ memorize target address; ADRment-Target
+variable DP-T                       \ and Target offset;  Dict.Pointer-Target
+
+\ convert target-addr in physical-address
+: taddr-calc ( taddr -- phys-addr)
+    ADR-T @ +
+    ;
 
 \ get a byte in the target
 : c@-t  ( taddr -- c )
-    ADR-T @ + c@
+    taddr-calc c@
     ;
 
 \ get a 16-bit word from the target
@@ -152,14 +152,52 @@ variable DP-T                   \ and Target offset;  Dict.Pointer-Target
 \ ;
 
 \ store a byte in the target
-: c!-t  ( char taddr -- )
-    ADR-T @ + c!
+: c!-t  ( char taddr -- )   
+    taddr-calc c!
     ;
 
-\ store a 16-bit word in the target
-: !-t  { word taddr -- }    \ caution: local variables
+\ store a 16-bit word in the target 
+: !-t  { word taddr -- }    \ CAUTION: local variables
     word byte-invert
     $100 /mod swap
-    taddr c!-t
-    taddr 1+ c!-t
+    taddr  c!-t
+    taddr  1+ c!-t
     ;
+
+\ target dictionary pointer stacks
+: here-t  ( -- taddr )
+    DP-T @
+    ;
+
+\ allocate n bytes in the target
+: allot-t  ( n -- )
+    DP-T +!
+    ;
+
+\ Logical OR on one byte in the target
+: cset-t  { mask taddr -- } \ CAUTION: locals variables
+    taddr c@-t
+    mask or
+    taddr c!-t
+    ;
+
+\ compile a byte in the target
+: c,-t  ( char -- ) 
+    here-t c!-t
+    1 allot-t
+    ;
+
+\ compile a 16-bit word into the target
+: ,-t  ( w -- )             
+    here-t !-t 2 allot-t
+    ;
+
+\ compile a string in the target
+: string,-t  ( addr len -- )
+    0                       
+    ?do
+        count c,-t
+    loop
+    drop
+    ;
+
