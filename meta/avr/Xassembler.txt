@@ -6,18 +6,18 @@
 \    Copyright:     Mikael Nordman                                    *
 \    Author:        Mikael Nordman                                    *
 \ adapted for gForth by Marc PETREMANN 26.03.2021                     *
-\    Updated:       11.04.2021                                        *
+\    Updated:       27.04.2021                                        *
 \ *********************************************************************
-\    FlashForth is licensed acording to the GNU General Public License*
+\  FlashForth is licensed acording to the GNU General Public License  *
 \ *********************************************************************
 \ FlashForth assembler for Atmega chips
 
 \ define Xassembler vocabulary
-defined Xassembler invert [if]
+[ifundef] Xassembler
     vocabulary Xassembler
 [then]
 
-\ defined meta [if]
+\ [ifdef] meta
 \     meta also meta definitions
 \     \ immediate version selection Xassembler voc.
 \     : [Xassembler] ( ---)          
@@ -48,38 +48,44 @@ defer c,
 
 
 \ Combine the opcode with the operand fields
-: mask! ( dest1 opcode mask -- instruction )
-    rot over invert and rot rot and or ; \ dest1&!mask src&mask or
+: mask! { dest1 opcode mask -- instruction }
+\      rot over invert and rot rot and or ; \ dest1&!mask src&mask or
+    mask invert dest1 and
+    opcode mask and
+    or      \ dest1&!mask src&mask or
+    ; 
 
-\ Fetch src and mask from addr and append to dictinary via mask
+\ Fetch src and mask from addr and append to dictionary via mask
 : mask,  ( dest1 addr -- )
     2@ swap mask! , ;
 
 \ Create name and data fields for opcode and mask
-: create,,  create , ,  ;
+: create,,  ( opcode mask --)
+    create  ,  ,
+    ;
 
 : Rd,Rr:    ( Rd Rr opcode mask -- xxxz.xxrd.dddd.rrrr )
   create,,
   does> >r
-    $1f and dup $5 lshift or $20f and  \ -- Rd r00000rrrr
-    swap $4 lshift $1f0 and            \ -- rr 0ddddd0000
-    or r> 2@ mask!              \ -- ddrr opcode mask mask!
+    $1f and dup $5 lshift or $20f and   \ -- Rd r00000rrrr
+    swap $4 lshift $1f0 and             \ -- rr 0ddddd0000
+    or r> 2@ mask!                      \ -- ddrr opcode mask mask!
     dup $fc07 and $9000 =
-    if $efff and then , ;             \ if Z or Y then z=0
+    if $efff and then , ;               \ if Z or Y then z=0
 
 : Rd:        ( Rd opcode mask -- xxxx.xxxd.dddd.xxxx )
   create,,
   does> >r
-    $4 lshift $1f0 and                 \ -- 0ddddd0000
+    $4 lshift $1f0 and                  \ -- 0ddddd0000
     r> mask, ;
 
 \ Operands Rd,constant 8bit
 : Rd,k:     ( Rd k8 opcode mask -- xxxx.kkkk.dddd.kkkk )
   create,,
   does> >r
-    $ff and dup $4 lshift or $f0f and  \ -- Rd kkkk0000kkkk
-    swap $4 lshift $f0 and             \ -- kk dddd0000
-    or r> mask, ;              \ kkdd opcode mask mask! 
+    $ff and dup $4 lshift or $f0f and   \ -- Rd kkkk0000kkkk
+    swap $4 lshift $f0 and              \ -- kk dddd0000
+    or r> mask, ;                       \ kkdd opcode mask mask! 
 
 \ Operands Rd,Rr,constant 6bit
 : Rd,Rr+q:  ( Rd Rr k6 opcode mask -- xxkx.kkxd.dddd.rkkk )
@@ -356,6 +362,27 @@ $0e constant -X
     constant
     ;
 
+\ Define constant byte(s) in program memory and EEPROM.
+: .db ( c --)
+    ?dup $ff >
+    if
+        abort" too big"
+        exit
+    then
+    c,
+    ;
+
+\ Define constant byte(s) in program memory and EEPROM.
+: .dw ( c --)
+    ?dup $ffff >
+    if
+        abort" too big"
+        exit
+    then
+    ,
+    ;
+
+
 \ *** MACROS definitions *********
 
 : .macro ( exec: -- <name>)
@@ -383,7 +410,6 @@ $0e constant -X
     base @ >r
     s>d <# # # # # #> type space
     r> base ! ;
-
 
 
 ' .HH   is c,
