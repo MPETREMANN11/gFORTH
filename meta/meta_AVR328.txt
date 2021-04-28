@@ -5,7 +5,7 @@
 \    MCU:           Atmega -- gForth                                  *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
-\    Updated:       11.04.2021                                        *
+\    Updated:       28.04.2021                                        *
 \ *********************************************************************
 \   FlashForth is licensed acording to the GNU General Public License *
 \ *********************************************************************
@@ -17,109 +17,75 @@
 \ pour tests:
 \ cd HTMLEDIT/arduino-forth/www/articles/listings/gForth/meta
 \ sous gForth:
-\ include s" meta_AVR328.txt" included
 \ include meta_AVR328.txt
+\
+\ use  dbg <word>   to debug a word
+
 
 \ order of files loading:
 \ ----- forthExtend.txt
+\       meta.txt
 \       avr/Xassembler.txt
 \       avr/config.txt      ------- m328def.txt
 \       avr/macros.txt
-\       meta.txt
 \       avr/core.txt
 
-
-
-\ Select the include file for your micro controller
-\ Define a symbol for which file to include.
-\ #define ffm328
-create ffm328   \ @TODO: faire directive #define
-
-
-
+\ extend gForth
 include forthExtend.txt
 
+\ meta compiler
+include meta.txt
+meta s" AVR328.HEX"  TARGET$ $!          \ initialization target file name
+.options
+
+\ adapation of NFA, CFA, etc...
+include avr/FFmetaHeader.txt
+
+
+\ Select the include file for your micro controller, used in config.txt
+\ Define a symbol for which file to include.
+\ uncomment only one line:
+\ create ffm2560
+create ffm328
+\ create ffm32u4
+\ create ffm16u4
+
+
+\ Cross AVR assembler
 include avr/Xassembler.txt
-
-
 
 
 \ create __ATmega328P__
 create op0  \ @TODO provisoire, à la recherche des op0 et op3 perdus
 
-\ Include the FlashForth configuration file
+\ FlashForth configuration file
 include avr/config.txt
 
+\ extend Xassembler with macros
 include avr/macros.txt
 
 
 
 
-
-
-
-\ Memory mapping prefixes
-$0000   .equ PRAM               \ 8 Kbytes of ram (atm2560)
-RAMEND 1+ .equ PEEPROM          \ 4 Kbytes of eeprom (atm2560)
-
-
-
-FLASHEND $1ffff = [if]              \ 128 Kwords flash
-    PEEPROM EEPROMEND + 1+ .equ OFLASH  \ 52 Kbytes available for FlashForth(atm2560)
-    0 .equ PFLASH  
-    3 .equ RAMPZV
-    $0d80 .equ KERNEL_SIZE
-[then]
-
-FLASHEND $ffff = [if]               \ 64 Kwords flash              
-    PEEPROM EEPROMEND + 1+ .equ OFLASH  \ 56 Kbytes available for FlashForth(atm128)
-    0       .equ PFLASH  
-    1       .equ RAMPZV
-    $0d00   .equ KERNEL_SIZE
-[then]
-
-FLASHEND $7fff = [if]               \ 32 Kwords flash              
-    PEEPROM EEPROMEND + 1+ .equ OFLASH \ 56 Kbytes available for FlashForth
-    0 .equ PFLASH = 0
-    0 .equ RAMPZV
-    $0d00 .equ KERNEL_SIZE
-[then]
-
-FLASHEND $3fff = [if]               \ 16 Kwords flash            
-    $8000   .equ OFLASH             \ 32 Kbytes available for FlashForth
-    OFLASH  .equ PFLASH
-    0       .equ RAMPZV
-    $0c80   .equ KERNEL_SIZE
-[then]
-
-FLASHEND $1fff = [if]               \ 8  Kwords flash
-    $C000 constant OFLASH           \ 16 Kbytes available for FlashForth
-    OFLASH  .equ PFLASH
-    0       .equ RAMPZV
-    $0c80   .equ KERNEL_SIZE=
-[then]
-
-
 \ *** Define memory allocation for TARGET *******************
-false [if]
+\ false [if]
 \ size of 1 code page
+
+only
+forth also  meta also
+forth definitions
 1024 constant PAGE-SIZE
 
 \ allot n pages in memory
 create META-TARGET
-    \ PAGE-SIZE 32 * allot
-    0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,
-    0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,
-    0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,   0 ,
-[endif]
+    PAGE-SIZE 32 * allot
 
 
+META-TARGET ADR-T !
 
-\ include meta.txt
-
-\ META-TARGET SEG-T !
-
-
+\ updated assembler vectors for meta-generation.
+meta ' c,-t         Xassembler IS c,
+meta ' ,-t          Xassembler IS ,
 
 
 \ build FORTH core in assembler and words in FORTH language
