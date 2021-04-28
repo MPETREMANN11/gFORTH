@@ -1,0 +1,54 @@
+\ *********************************************************************
+\ Meta compiler for generating FlashForth headers                     *
+\    Filename:      FFmetaHeader.txt                                  *
+\    Date:          25.04.2021                                        *
+\    Updated:       27.04.2021                                        *
+\    MCU:           gForth                                            *
+\    Copyright:     Marc PETREMANN                                    *
+\    Author:        Marc PETREMANN                                    *
+\ *********************************************************************
+
+
+\ FlashForth word header flags
+$80 constant NFA        \ Name field mask
+$40 constant IMMED      \ Immediate mask
+$20 constant INLINE     \ Inline mask for 1 and 2 cell code
+\ .equ INLINE4= 0x00   \ Inline mask for 4 cell code
+\ .equ INLINE5= 0x00   \ Inline mask for 5 cell code
+$10 constant COMPILE    \ Compile only mask
+$0f constant NFAmask    \ Name field length mask
+
+
+
+\ compilation of FlashForth lfa field
+\ lfa = Link Field Address
+: compileLFA ( --)
+\ break" compileLFA : "
+    LAST-T              \ Latest nfa compiled
+    @   ,-t
+    here-t LAST-T !
+    ;
+
+
+
+
+
+\ compilation of FlashForth nfa field -- tested OK: 27apr2021
+\ nfa = Name Field Address
+: compileNFA ( toIn --)
+\ break" compileNFA : "  
+    \ compile first byte of NFA
+    dup c@  $80 or c,-t
+    \ compile name of word
+    count string,-t
+    ;
+
+
+\ compile header for FlashForth words
+: (compile-header) ( --)
+    compileLFA          \ first compile the LFA field
+    compileNFA          \ then compile the NFA field
+    ;
+
+\ resolves compile-header in meta voc.
+' (compile-header) is compile-header
