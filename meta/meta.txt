@@ -2,7 +2,7 @@
 \ Meta compiler for generating Xcross compiled code                   *
 \    Filename:      meta.txt                                          *
 \    Date:          26.03.2021                                        *
-\    Updated:       12.04.2021                                        *
+\    Updated:       28.04.2021                                        *
 \    MCU:           gForth                                            *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
@@ -10,23 +10,19 @@
 
 
 
-\ the TARGET vocabulary receives the headers of the
-\ words to be compiled in the target
+\ the TARGET vocabulary receives the headers of the words to be compiled in the target
 vocabulary target
 
-\ the TRANSITION vocabulary receives words with
-\ immediate action during meta-compilation
+\ the TRANSITION vocabulary receives words with immediate action during meta-compilation
 vocabulary transition
 
-\ the FORWARD vocabulary receives the headers
-\ of the reference words before
+\ the FORWARD vocabulary receives the headers of the reference words before
 vocabulary forward
 
 vocabulary Xuser
 
+\ the Xassembler vocabulary receives the Cross Assembler
 vocabulary Xassembler
-\ s" avr/Xassembler.txt" included
-\ include avr/Xassembler.txt
 
 \ meta contains the meta-compiler
 vocabulary meta
@@ -117,11 +113,18 @@ meta definitions
     Xassembler definitions also     \ META FORTH
     ;
 
-
-
 \ word definition strength in FORWARDS
 : in-forward  ( -- )
     forward definitions             \ order of words starting with FORWARDS
+    ;
+
+\ Search in a single vocabulary     \ @TODO à surveiller....
+: -find  ( <mot> -- cfa f )
+    bl word                         \ isole un mot dans le flot d'entrée
+    \ count type
+    \ ?UPPERCASE                    \ conversion caractères majuscules
+    \ dup CONTEXT @
+    find                            \ recherche dans voc de contexte
     ;
 
 
@@ -152,11 +155,11 @@ variable DP-T                       \ and Target offset;  Dict.Pointer-Target
 \ ;
 
 \ store a byte in the target
-: c!-t  ( char taddr -- )   
+: c!-t  ( char taddr -- )
     taddr-calc c!
     ;
 
-\ store a 16-bit word in the target 
+\ store a 16-bit word in the target
 : !-t  { word taddr -- }    \ CAUTION: local variables
     word byte-invert
     $100 /mod swap
@@ -182,22 +185,958 @@ variable DP-T                       \ and Target offset;  Dict.Pointer-Target
     ;
 
 \ compile a byte in the target
-: c,-t  ( char -- ) 
+: c,-t  ( char -- )
     here-t c!-t
     1 allot-t
     ;
 
 \ compile a 16-bit word into the target
-: ,-t  ( w -- )             
-    here-t !-t 2 allot-t
+: ,-t  ( w -- )
+    here-t !-t
+    2 allot-t
     ;
 
 \ compile a string in the target
 : string,-t  ( addr len -- )
-    0                       
+    0
     ?do
         count c,-t
     loop
     drop
     ;
+
+
+
+
+\ Xassembler Meta Assembler
+\ : M?>MARK  ( -- f addr )
+\   true here-t 0 c,-t
+\ ;
+
+\ : M?>RESOLVE  ( f addr -- )
+\   here-t over 1+ - swap c!-t ?CONDITION
+\ ;
+
+\ : M?<MARK  ( -- f addr )
+\   true here-t
+\ ;
+
+\ : M?<RESOLVE  ( f addr -- )
+\   here-t 1+ - c,-t ?CONDITION
+\ ;
+
+\ ' HERE-T       Xassembler IS HERE
+\ ' M?>MARK      Xassembler IS ?>MARK
+\ ' M?>RESOLVE   Xassembler IS ?>RESOLVE
+\ ' M?<MARK      Xassembler IS ?<MARK
+\ ' M?<RESOLVE   Xassembler IS ?<RESOLVE
+
+meta in-meta
+
+\ Variables and work options for metacompiler
+variable    WIDTH     31 WIDTH !    \ Headers: nfa size
+variable    LAST-T                  \ Latest nfa compiled
+variable    CONTEXT-T               \ context metavocabulary
+variable    CURRENT-T               \ current metavocabulary
+variable    CHECKING                \ Compilation enslaved
+variable    FORCE                   \ Forced compilation
+variable    VALID     VALID on      \ Validity of current definition
+variable    OLD-T                   \ Old position in target
+variable    SAVING    SAVING on     \ Saving option
+
+\ store the destination filename
+string TARGET$                      \ initialization in meta_XXXXXX.XXX
+
+\ Display of the state of a flag.
+: .flag  ( adr -- )
+    @ ?dup                          \ empile et teste si contenu adr non nul
+    if                              \ si non nul,
+        ." ON "                     \ affiche 'ON'
+        dup true <>                 \ teste si <> de 'vrai' (-1)
+        if                          \ si <> de -1
+            ." ( " . ." )"          \ affiche valeur entre ( et )
+        else                        \ sinon supprime valeur parasite
+            drop
+        then
+    else
+        ." OFF"                     \ si nul, affiche 'OFF'
+    then
+    ;
+
+\ Displaying meta-compilation options
+: .options ( -- )
+\     break" debug .options"
+    cr ." OPTIONS :"
+    cr FRENCH  ?\ ."   En-têtes (longueur)             WIDTH "
+       ENGLISH ?\ ."   Header (length)                 WIDTH "
+       GERMAN  ?\ ."   Namen (lange)                   WIDTH "
+    WIDTH    .flag
+    cr FRENCH  ?\ ."   Compilation asservie         CHECKING "
+       ENGLISH ?\ ."   Controlled compilation       CHECKING "
+       GERMAN  ?\ ."   Kontrolierte Compilation     CHECKING "
+    CHECKING .flag
+    cr FRENCH  ?\ ."   Sauvegarde de la cible         SAVING "
+       ENGLISH ?\ ."   Saving the target              SAVING "
+       GERMAN  ?\ ."   TARGET abspeichern             SAVING "
+    SAVING   .flag
+    cr FRENCH  ?\ ."   Fichier de sauvegarde         TARGET$ "
+       ENGLISH ?\ ."   Output file                   TARGET$ "
+       GERMAN  ?\ ."   Files Name abspeichert in     TARGET$ "
+    TARGET$ $@  type
+    cr
+    ;
+
+\ Compiling and resolving target or forward references
+: make-code  ( PFA -- )
+    \ dup 2 + @
+    dup cell + @
+    if
+        @
+    else
+        drop 0
+    then
+    ,-t
+    ;
+
+: link-backwards  ( PFA -- )
+    VALID @
+    if
+        here-t over @ ,-t swap !
+    else
+        drop 0 ,-t
+  then
+    ;
+
+: resolved?  ( pfa -- f )
+    \   2 + @
+    cell + @
+    ;
+
+: forward-code  ( pfa -- )
+    dup resolved?
+    if
+        make-code
+    else
+        link-backwards
+    then
+    ;
+
+\ create a FORWARD reference
+: forward:  ( -- )
+    switch forward definitions
+    create
+        switch 0 , 0 ,
+    does>
+        forward-code
+    ;
+
+\ : 'T  ( -- cfa )
+\   CONTEXT @ target DEFINED rot CONTEXT !
+\   0= ?MISSING
+\ ;
+
+\ : [TARGET]   ( -- )   'T , ; immediate
+
+: tickF  ( -- cfa f )
+    CONTEXT @ forward -find rot CONTEXT !
+    ;
+
+\ : [FORWARD]  ( -- )
+\   tickF 0= ?MISSING ,
+\ ; immediate
+
+: resolve  ( taddr cfa -- )
+    >BODY 2dup true over 2 + ! @
+    begin
+      dup
+    while
+      2dup @-t -ROT swap !-t
+    repeat
+    2DROP !
+    ;
+
+: ?resolves  ( -- )
+    tickF
+    if
+        dup >BODY resolved? 0=
+        if
+            here-t swap resolve
+        else
+            drop
+        then
+    else
+        drop
+    then
+    ;
+
+\ Validate definitions in controlled mode
+\ Check the validity of a new word
+defer ?valid  ( -- )
+
+
+\ Validation on "marked" words from FORTH -- @TODO: à débugger
+\ : (?valid)  ( -- )
+\     CHECKING @
+\     if
+\         >IN @ CONTEXT @
+\         forth -find
+\         if
+\             >VIEW @ 0<>
+\         else
+\             drop FALSE
+\         then
+\         VALID !
+\         CONTEXT ! >IN !
+\     then
+\     ;
+
+: (?valid)  ( -- )
+    true VALID !
+    ;
+
+
+' (?valid) is ?valid
+
+
+\ move backward dictionary pointer if invalid word
+: ?backstep  ( -- )
+    VALID @
+    if      here-t OLD-T !  \ dictionary pointer target in OLD-T
+    else    OLD-T @ DP-T !  \ brings back target dictionary pointer
+    then
+    ;
+
+\ returns target dictionary pointer if word is valid
+: ?here-t  ( -- taddr )
+    VALID @
+    if      here-t
+    else    0
+    then
+    ;
+
+
+\ Directive for mandatory compilation
+: forced  ( -- )
+    ?backstep CHECKING @ FORCE !
+    CHECKING OFF VALID ON
+    ;
+
+\ Compulsory end of compilation
+: unforced  ( -- )
+    FORCE @  CHECKING !
+    ;
+
+
+\ Coded labels without header in target
+: label  ( -- )
+    \ @TODO: à surveiller, semble fonctionner
+    forced
+    >IN @ Xassembler definitions
+    here-t constant                 \ create label in Xassembler vocabulary
+    >IN ! ?resolves unforced
+    ;
+
+
+
+\ Création des en-têtes dans la cible
+\ : HASH  ( str-addr voc-addr -- thread )
+\   swap 1+ c@ #THREADS 1- AND 2* +
+\ ;
+
+
+\ *** compilation of lfa field ***************************
+\ lfa = Link Field Address
+defer compileLFA
+
+\ the LFA link is connected to the previously defined word
+: (lfa-t,) ( ---)
+    0 ,-t  0 ,-t
+    ;
+
+' (lfa-t,) is compileLFA
+
+
+\ *** compilation of complete header word ***************************
+defer compile-header
+
+
+
+\ compile header into target --- @TODO : à adapter aux en-têtes FlashForth
+: header-t  ( -- )
+\ break" header-t : "
+    bl word
+    dup
+    c@ WIDTH @ MIN \ dup
+    VALID @ AND
+    if
+\         ALIGN
+        compile-header      \ compilation of complete word header
+     else
+        drop
+    then
+    ;
+
+
+\ Creation in target and target reference with FORWARD auto-resolution
+: target-create  ( -- )
+    ?backstep
+    ?valid
+\ break" target-create : "
+    >IN @ dup header-t
+    >IN ! in-target
+    create
+        in-meta here-t , VALID @ ,
+        >IN ! ?resolves
+    does>
+        make-code
+    ;
+
+
+
+\ affiche nom d'une référence target à partir de son cfa cible
+\ variable CFA-REF
+\ : .REF ( cfa --- )
+\   CFA-REF !
+\   target CONTEXT @ HERE #THREADS 2* CMOVE
+\   begin
+\     HERE #THREADS LARGEST dup
+\   while
+\     dup NAME> >BODY 2 + @  CFA-REF @ =
+\     if
+\       .ID
+\ \     else
+\ \      drop
+\     then
+\     @ swap ! STOP?
+\     if
+\       EXIT
+\     then
+\   repeat
+\   2DROP in-meta ;
+
+\ : RECREATE  ( -- )
+\     >IN @ target-create >IN !
+\ ;
+
+
+\ definition of word in binary in target
+: code  ( comp: -- <name> | exec: --)
+    \ @TODO: to debug
+    target-create
+    \ here-t 2+ ,-t 
+    Xassembler 
+    !csp
+    ;
+
+
+Xassembler also  definitions
+
+\ end of binary in target
+: end-code
+break" end-code : "
+    in-meta \ ?CSP   \ teste si pile modifiée
+    ;
+
+meta in-meta
+
+\ Compilation des mots de transition
+\ : T:  ( -- )
+\   switch  transition definitions
+\   create
+\     switch ]
+\   does>
+\     >R
+\ ;
+
+\ : T;  ( -- )
+\   switch  transition definitions
+\   [COMPILE] ; switch
+\ ; immediate
+\
+\ : DIGIT?  ( CHAR -- F )
+\   BASE @ DIGIT NIP
+\ ;
+\
+\ : PUNCT?  ( CHAR -- F )
+\   ASCII . over = SWAP
+\   ASCII - over = SWAP
+\   ASCII / over = SWAP
+\   drop OR OR
+\ ;
+\
+\ : NUMERIC?  ( ADDR LEN -- F )
+\   dup 1 =
+\   if
+\     drop c@ DIGIT? EXIT
+\   then
+\   1 -ROT 0
+\   ?do
+\     dup c@ dup DIGIT? swap PUNCT? OR
+\     rot AND swap 1+
+\   loop
+\   drop
+\ ;
+
+\ Mots de transition
+\ T: (
+\    [COMPILE] (
+\ T;
+\
+\ T: (S
+\    [COMPILE] (S
+\ T;
+\
+\ T: \
+\    [COMPILE] \
+\ T;
+\
+\ T: ?\
+\    [COMPILE] ?\
+\ T;
+\
+\ T: FRENCH
+\    [COMPILE] FRENCH
+\ T;
+\
+\ T: ENGLISH
+\    [COMPILE] ENGLISH
+\ T;
+\
+\ T: GERMAN
+\    [COMPILE] GERMAN
+\ T;
+\
+\ T: CPU086
+\    [COMPILE] CPU086
+\ T;
+\
+\ T: CPU386
+\    [COMPILE] CPU386
+\ T;
+\
+\ : ]]
+\   ]
+\ ;
+\
+\ : [[
+\   [COMPILE] [
+\ ; forth immediate meta
+\
+\ \ T: EOF
+\ \    [COMPILE] EOF
+\ \ T;
+\
+\ forward: definitions
+\ forward: [
+\
+\ : STRING,-T  ( -- )
+\   ASCII " PARSE dup c,-t string,-t ALIGN
+\ ;
+\
+\ forward: (.")
+\
+\ T: ."
+\    [FORWARD] (.") STRING,-T
+\ T;
+\
+\ forward: (")
+\
+\ T: "
+\    [FORWARD] (") STRING,-T
+\ T;
+\
+\ forward: (ABORT")
+\
+\ T: ABORT"
+\    [FORWARD] (ABORT") STRING,-T
+\ T;
+\
+\ forward: (LIT)
+\
+\ T: LITERAL  ( n -- )
+\    [FORWARD] (LIT) ,-t
+\ T;
+\
+\ T: DLITERAL  ( d -- )
+\    [FORWARD] (LIT) ,-t
+\    [FORWARD] (LIT) ,-t
+\ T;
+\
+\ T: ASCII  ( -- )
+\    [COMPILE] ASCII [[  transition ]] LITERAL [META]
+\ T;
+\
+\ \ Mots de définition
+\ forward: DOCREATE
+\
+\ : create
+\   RECREATE [FORWARD] DOCREATE ?here-t CONSTANT
+\ ;
+\
+\ : variable  ( -- )
+\   create
+\     0 ,-t
+\ ;
+\
+\ : 2variable  ( -- )
+\   create
+\     0 ,-t 0 ,-t
+\ ;
+\
+\ forward: DODEFER
+\
+\ : DEFER  ( -- )
+\   target-create [FORWARD] DODEFER 0 ,-t
+\ ;
+\
+\ forward: DOCONSTANT
+\
+\ : CONSTANT  ( n -- )
+\   RECREATE [FORWARD] DOCONSTANT dup ,-t CONSTANT
+\ ;
+\
+\ forward: DO2CONSTANT
+\
+\ : 2CONSTANT  ( d -- )
+\   RECREATE [FORWARD] DO2CONSTANT
+\   over over ,-t ,-t 2CONSTANT
+\ ;
+\
+\ forward: DOSTRING
+\
+\ : STRING  ( n --)
+\   RECREATE [FORWARD] DOSTRING
+\   dup c,-t 0 c,-t dup allot-t STRING
+\ ;
+\
+forth
+variable #USER-T
+meta also Xuser definitions
+
+: allot  ( n -- )
+    #USER-T +!
+    ;
+
+\ forward: DOUSER-VARIABLE
+\
+\ : variable  ( -- )
+\   switch RECREATE [FORWARD] DOUSER-VARIABLE #USER-T @
+\   dup ,-t 2 ALLOT meta definitions
+\   [FORTH] CONSTANT [META] switch
+\ ;
+\
+\ forward: DOUSER-DEFER
+\
+\ : DEFER  ( -- )
+\   switch RECREATE [FORWARD] DOUSER-DEFER #USER-T @
+\   dup ,-t 2 ALLOT meta definitions
+\   [FORTH] CONSTANT [META] switch
+\ ;
+
+meta in-meta
+
+\ Transition words and vocabularies
+forth variable VOC-LINK-T meta
+
+\ forward: <vocabulary>
+
+\ : vocabulary  ( -- )
+\   RECREATE [FORWARD] <vocabulary> here-t #THREADS 0
+\   DO
+\     0 ,-t
+\   loop
+\   here-t VOC-LINK-T @ ,-t VOC-LINK-T !
+\   [FORTH] CONSTANT
+\   does>
+\     @ [META] CONTEXT-T !
+\ ;
+
+\ forward: (;USES)
+
+\ forth variable STATE-T meta
+
+\ T: ;USES  ( -- )
+\    [FORWARD] (;USES) IN-meta Xassembler
+\    !csp STATE-T OFF
+\ T;
+
+\ T: [COMPILE]
+\    'T EXECUTE
+\ T;
+
+\ forward: (IS)
+
+\ T: IS
+\    [FORWARD] (IS)
+\ T;
+
+\ : IS
+\   'T >BODY dup 2+ @
+\   if
+\     @ >BODY !-t
+\    else
+\     2DROP
+\   then
+\ ;
+
+\ T: ALIGN
+\ T;
+
+\ T: EVEN
+\ T;
+
+\ forward: (;CODE)
+\ forward: DODOES
+
+\ T: does>  ( <forward-type> -- )
+\    [FORWARD] (;CODE) ?resolves ( DOES-OP ) 232 c,-t
+\    [FORWARD] DODOES here-t dup 2- @-t over - swap 2- !-t
+\ T;
+
+\ : NUMERIC  ( -- )
+\   [FORTH] HERE [META] NUMBER DPL @ 1+
+\   if
+\     [[  transition ]] DLITERAL [META]
+\    else
+\     drop [[  transition ]] LITERAL [META]
+\   then
+\ ;
+
+\ : UNDEFINED  ( -- )
+\   here-t 0 ,-t in-forward [FORTH]
+\   create
+\     [META]  transition [FORTH] , FALSE , [META]
+\   does>
+\     forward-code
+\ ;
+
+\ *** list of forward references used in core.txt ******************************
+
+
+
+
+\ *** END of list forward in core.txt ******************************
+
+
+
+\ Boucle de compilation méta-générateur
+\ [FORTH] variable T-IN meta
+
+\ : ]  ( -- )
+\     STATE-T ON in-transition
+\     begin
+\         >IN @ T-IN ! DEFINED
+\         if
+\             EXECUTE
+\          else
+\             count NUMERIC?
+\             if
+\                 NUMERIC
+\              else
+\                 VALID @
+\                 if
+\                     T-IN @ >IN ! UNDEFINED
+\                 then
+\             then
+\         then
+\         STATE-T @ 0= END? @ OR END? OFF
+\     UNTIL
+\     ;
+
+\ : NEWSTATE
+\   STATE-T @
+\   if
+\     ]
+\   then
+\   STATE
+\ ;
+
+\ [FORTH] ' NEWSTATE IS RUN meta
+
+\ T: [  ( -- )
+\    in-meta STATE-T OFF
+\ T;
+\
+\ forward: UNNEST
+\
+\ T: ;  ( -- )
+\    [FORWARD] UNNEST [[  transition ]] [
+\ T;
+\
+\ forward: NEST
+\
+\ \ Structures de contrôle de META
+\ : ?>MARK  ( -- f addr )
+\   true here-t 0 ,-t
+\ ;
+\
+\ : ?>RESOLVE  ( f addr -- )
+\   here-t swap !-t ?CONDITION
+\ ;
+\
+\ : ?<MARK  ( -- f addr )
+\   true here-t
+\ ;
+\
+\ : ?<RESOLVE  ( f addr -- )
+\   ,-t ?CONDITION
+\ ;
+\
+\ forward: BRANCH
+\ forward: ?BRANCH
+\
+\ T: begin
+\    ?<MARK
+\ T;
+\
+\ T: AGAIN
+\    [FORWARD] BRANCH ?<RESOLVE
+\ T;
+\
+\ T: UNTIL
+\    [FORWARD] ?BRANCH ?<RESOLVE
+\ T;
+\
+\ T: if
+\    [FORWARD] ?BRANCH ?>MARK
+\ T;
+\
+\ T: then
+\    ?>RESOLVE
+\ T;
+\
+\ T:  else
+\    [FORWARD] BRANCH ?>MARK 2SWAP ?>RESOLVE
+\ T;
+\
+\ T: while
+\    [[  transition ]] if
+\ T;
+\
+\ T: repeat
+\    2SWAP [[  transition ]] AGAIN then
+\ T;
+\
+\ forward: (?do)
+\ forward: (DO)
+\ forward: (loop)
+\ forward: (+loop)
+\ forward: (LEAVE)
+\ forward: (?LEAVE)
+\
+\ T: ?do
+\    [FORWARD] (?do) ?>MARK
+\ T;
+\
+\ T: DO
+\    [FORWARD] (DO) ?>MARK
+\ T;
+\
+\ T: loop
+\    [FORWARD] (loop) 2dup 2+ ?<RESOLVE ?>RESOLVE
+\ T;
+\
+\ T: +loop
+\    [FORWARD] (+loop) 2dup 2+ ?<RESOLVE ?>RESOLVE
+\ T;
+\
+\ T: LEAVE
+\    [FORWARD] (LEAVE)
+\ T;
+\
+\ T: ?LEAVE
+\    [FORWARD] (?LEAVE)
+\ T;
+\
+\ forward: over
+\ forward: drop
+\ forward: =
+\
+\ T: CASE
+\    CSP @ !csp
+\ T;
+\
+\ T: OF
+\    [FORWARD] over [FORWARD] =
+\    [FORWARD] ?BRANCH ?>MARK
+\    [FORWARD] drop
+\ T;
+\
+\ T: ENDOF
+\    [[  transition ]]  else
+\ T;
+\
+\ T: ENDCASE
+\    [FORWARD] drop
+\    [FORTH] begin
+\              SP@ CSP @ <>
+\            while
+\              [META] ?>RESOLVE
+\    [FORTH] repeat
+\    CSP ! [META]
+\ T;
+
+
+
+\ Final metacompilation and backup report
+\ List of validated TARGET symbols
+\ : .symbols    ( -- )
+\     \ RMARGIN @  >R
+\     \ 53 RMARGIN !  \ sauvegarde et modif. de RMARGIN
+\     cr
+\     FRENCH  ?\ ." Liste des mots de la cible :"
+\     ENGLISH ?\ ." Target words list :"
+\     GERMAN  ?\ ." TARGET Namenliste :"
+\     cr  TARGET CONTEXT @ HERE #THREADS 2* CMOVE
+\     begin
+\         HERE #THREADS  LARGEST   dup
+\     while
+\         dup L>NAME  dup c@  31 AND #OUT @ + RMARGIN @ >
+\         if
+\             cr LMARGIN @ SPACES
+\         then
+\         dup NAME> >BODY
+\         dup @  BASE @ >R  HEX 0 <# # # # # #> type SPACE R> BASE !
+\         2+ @
+\         if
+\             .ID 26 ?TAB
+\         else
+\             drop
+\         then
+\         @ swap !   STOP?
+\         if
+\             R> RMARGIN !
+\             EXIT
+\         then
+\     repeat 2DROP in-meta
+\     R> RMARGIN !        \ restaure valeur initiale de RMARGIN
+\     ;
+
+\ : .UNRESOLVED  ( -- )
+\   FORWARD CONTEXT @ HERE #THREADS 2* CMOVE
+\   begin
+\     HERE #THREADS LARGEST dup
+\   while
+\     ?CR dup L>NAME NAME> >BODY resolved? 0=
+\     if
+\       dup L>NAME .ID
+\     then
+\     @ swap ! STOP?
+\     if
+\       2DROP in-meta EXIT
+\     then
+\   repeat
+\   2DROP in-meta
+\ ;
+
+\ : statistiques ( --)
+\   cr  FRENCH  ?\ ." REFERENCES NON RESOLUES:"
+\       ENGLISH ?\ ." UNRESOLVED REFERENCES:"
+\       GERMAN  ?\ ." UNGEKLÄRTE WORTE:"
+\ \  cr .UNRESOLVED cr
+\   cr FRENCH  ?\ ."   STATISTIQUES: "
+\      ENGLISH ?\ ."   SYSTEM EVALUATION: "
+\      GERMAN  ?\ ."   Sys-STAT: "
+\ \   cr FRENCH  ?\ ." Segment hôte:             "
+\ \      ENGLISH ?\ ." Host segment:             "
+\ \      GERMAN  ?\ ." Initial Speicher Adresse: "
+\ \   DSEGMENT U.
+\    cr FRENCH  ?\ ." Dernière adresse hôte:    "
+\      ENGLISH ?\ ." Latest host adress:       "
+\      GERMAN  ?\ ." Letzte Initial Sp.Adresse:"
+\   [FORTH] HERE U.
+\   cr FRENCH  ?\ ." Segment cible:            "
+\      ENGLISH ?\ ." Target segment:           "
+\      GERMAN  ?\ ." TARGET Speicher Segment:  "
+\   ADR-T @ U.
+\   cr FRENCH  ?\ ." Première adresse cible:   "
+\      ENGLISH ?\ ." Fist target adress:       "
+\      GERMAN  ?\ ." Erste TARGET Adresse:     "
+\   in-meta 256  U.
+\   cr FRENCH  ?\ ." Dernière adresse cible:   "
+\      ENGLISH ?\ ." Latest target adress:     "
+\      GERMAN  ?\ ." Letzte TARGET Adresse:    "
+\     here-t U. cr cr
+\     ;
+
+\ : TSAVE ( -- )
+\   cr BOLD FRENCH  ?\ ." Sauvegarde de la cible dans "
+\           ENGLISH ?\ ." Saving the target in "
+\           GERMAN  ?\ ." TARGET abspeichert in "
+\   TARGET$ type
+\   FRENCH  ?\ ." , taille = "
+\   ENGLISH ?\ ." , size = "
+\   GERMAN  ?\ ." , größe = "
+\   here-t 256 - U. ATTOFF cr
+\   " LSAVE " TARGET$ 0 INSERT$
+\   ADR-T @ 256 here-t TARGET$ $EXECUTE
+\ ;
+\
+\ : END-META  ( -- )
+\   STATISTIQUES SAVING @
+\   if
+\     TSAVE
+\   then
+\   [FORTH] only forth also definitions DECIMAL
+\ ;
+
+\ Final words of interpretation for META
+\ : H:
+\     [COMPILE] :
+\     ;
+
+\ : H;
+\     [COMPILE] ;
+\     ; immediate
+\
+\ H: '
+\    'T >BODY @
+\ H;
+\
+\ H: ,
+\    ,-t
+\ H;
+\
+\ H: C,
+\    c,-t
+\ H;
+\
+\ H: HERE
+\    here-t
+\ H;
+\
+\ H: ALLOT
+\    allot-t
+\ H;
+\
+\ H: definitions
+\    definitions CONTEXT-T @ CURRENT-T !
+\ H;
+\
+\ H: immediate  ( -- )
+\    WIDTH @
+\    if                             ( Headers ? )
+\      64                           ( Precedence Bit )
+\      LAST-T @ cset-t
+\    then
+\ H;
+\
+\ H: :  ( -- )
+\    target-create [FORWARD] NEST ]
+\ H;
+\
+cr
+FRENCH  ?\ s" ──────────────── Meta Compilateur Chargé ────────────────────" type
+ENGLISH ?\ s" ────────────────── Meta Compiler Loaded ─────────────────────" type
+GERMAN  ?\ s" ────────────────── Meta Compiler Geladen ────────────────────" type
+cr
+
+[ONLY] forth definitions also
+
+
+\ alias for end-code
+\ : c;
+\   end-code
+\ ;
+
 
