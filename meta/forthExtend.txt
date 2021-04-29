@@ -23,10 +23,13 @@ true value LITTLE-ENDIAN
     ;
 
 
-\ multi language support, only one language is true
-true  value ENGLISH
-false value FRENCH
-false value GERMAN
+: 2+ ( n -- n+2)
+    1+ 1+ ;
+
+\ multi language support, only one language is "true"
+false value ENGLISH immediate
+true  value FRENCH  immediate
+false value GERMAN  immediate
 
 \ condtionnal compilation
 : ?\  ( fl -- )
@@ -42,23 +45,18 @@ false value GERMAN
 \      GERMAN  ?\ ." Letzte TARGET Adresse:    "
 
 
-
+\ specific version for gForth
 \ Strings extension
 : string ( comp: -- <name> | exec: -- addr)
-    create
-        0 , 0 ,
+    variable
     ;
 
-: $! ( addr len strVar --)
-    2!
-    ;
-
-: $@ ( strVar -- addr len )
-    2@
-    ;
 
 \ example:
 \ string TARGET$
 \ s" KERNEL.COM" TARGET$ $!
 \ TARGET$ $@ type
 
+
+\ *** End of File ***********************
+cr ." forthExtend.txt loaded" cr
