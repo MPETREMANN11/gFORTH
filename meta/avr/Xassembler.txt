@@ -20,33 +20,16 @@
 also Xassembler 
 Xassembler definitions
 
-\ *** for testing Xassembler ****************************
-: >lower ( c1 -- c2 )
-    dup 'A' 'Z' 1+ within bl and or ;
-
-: .HH ( c --)
-    base @ >r
-    s>d <# # # #> type space
-    r> base ! ;
-    
-: .HHHH ( n --)
-    base @ >r
-    s>d <# # # # # #> type space
-    r> base ! ;
 
 
 \ defered version of , and c,
 defer ,
 defer c,
 
-' .HH   is c,
-' .HHHH is ,
-\ defered words will be updated in file meta_xxxxx.txt, example:
-\ meta ' c,-t         Xassembler IS c,
-\ meta ' ,-t          Xassembler IS ,
+forth ' ,  Xassembler is ,
 
-\ *** @END of testing Xassembler ****************************
 
+\ hex
 
 \ OFLASH  constant pfl
 \ RAMPZV  constant zfl     \ value [0..3]
@@ -404,7 +387,7 @@ $03  constant ZH:ZL
     $100 /mod swap drop
     ;
 
-\ *** MACROS definitions *********
+\ *** ASSEMBLER directives definitions *********
 
 : .macro ( exec: -- <name>)
     : 
@@ -415,8 +398,29 @@ $03  constant ZH:ZL
     ; immediate
 
 
-\ *** END MACROS definitions ****
+\ *** END directives definitions ****
 
+\ *** for testing Xassembler ****************************
+: >lower ( c1 -- c2 )
+    dup 'A' 'Z' 1+ within bl and or ;
+
+: .HH ( c --)
+    base @ >r
+    s>d <# # # #> type space
+    r> base ! ;
+    
+: .HHHH ( n --)
+    base @ >r
+    s>d <# # # # # #> type space
+    r> base ! ;
+
+' .HH   is c,
+' .HHHH is ,
+\ defered words will be updated in file meta_xxxxx.txt, example:
+\ meta ' c,-t         Xassembler IS c,
+\ meta ' ,-t          Xassembler IS ,
+
+\ *** @END of testing Xassembler ****************************
 
 
 \ *** End of File ***********************
