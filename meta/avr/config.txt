@@ -1,6 +1,13 @@
+\ *********************************************************************
+\ FlashForth device configuration for Atmega devices                  *
+\    Filename:      config.txt                                        *
+\    Date:          11.03.2021                                        *
+\    Updated:       27.04.2021                                        *
+\    MCU:           gForth                                            *
+\    Copyright:     Marc PETREMANN                                    *
+\    Author:        Marc PETREMANN                                    *
+\ *********************************************************************
 
-
-\ FlashForth device configuration for Atmega devices
 
 \ Select the include file for your micro controller
 \ Define a symbol for which file to include.
@@ -74,7 +81,7 @@ ddrd    .equ U1RTS_DDR
 \ CPU load indicator led definitions. Needs IDLE_MODE = 1
 1   .equ CPU_LOAD_LED               \ set to 1 to enable
 
-defined ffm2560 [if]
+[ifdef] ffm2560
     ddrb    .equ CPU_LOAD_DDR
     portb   .equ CPU_LOAD_PORT          \ avr-p28:portc arduino mega:portb uno:portb leonardo:portc
     7       .equ CPU_LOAD_BIT           \ avr-p28:5     arduino mega:7     uno:5     leonardo:7
@@ -82,7 +89,7 @@ defined ffm2560 [if]
                                         \ arduino : 1 = high on port turns on led
 [endif]
 
-defined ffm328 [if]
+[ifdef] ffm328
     ddrb    .equ CPU_LOAD_DDR
     portb   .equ CPU_LOAD_PORT          \ avr-p28:portc arduino mega:portb uno:portb leonardo:portc
     5       .equ CPU_LOAD_BIT           \ avr-p28:5     arduino mega:7     uno:5     leonardo:7
@@ -90,7 +97,7 @@ defined ffm328 [if]
                                         \ arduino : 1 = high on port turns on led
 [endif]
 
-defined ffm32u4 [if]
+[ifdef] ffm32u4
     ddrc    .equ CPU_LOAD_DDR = ddrc
     portc   .equ CPU_LOAD_PORT = portc  \ avr-p28:portc arduino mega:portb uno:portb leonardo:portc
     7       .equ CPU_LOAD_BIT = 7       \ avr-p28:5     arduino mega:7     uno:5     leonardo:7
@@ -195,6 +202,356 @@ MS_TIMER 2 = [if]
         OC2addr     .equ MS_TIMER_ADDR
     [endif]
 [endif]
+
+
+
+\ Memory mapping prefixes
+$0000   .equ PRAM               \ 8 Kbytes of ram (atm2560)
+RAMEND 1+ .equ PEEPROM          \ 4 Kbytes of eeprom (atm2560)
+
+
+
+FLASHEND $1ffff = [if]              \ 128 Kwords flash
+    PEEPROM EEPROMEND + 1+ .equ OFLASH  \ 52 Kbytes available for FlashForth(atm2560)
+    0 .equ PFLASH
+    3 .equ RAMPZV
+    $0d80 .equ KERNEL_SIZE
+[then]
+
+FLASHEND $ffff = [if]               \ 64 Kwords flash
+    PEEPROM EEPROMEND + 1+ .equ OFLASH  \ 56 Kbytes available for FlashForth(atm128)
+    0       .equ PFLASH
+    1       .equ RAMPZV
+    $0d00   .equ KERNEL_SIZE
+[then]
+
+FLASHEND $7fff = [if]               \ 32 Kwords flash
+    PEEPROM EEPROMEND + 1+ .equ OFLASH \ 56 Kbytes available for FlashForth
+    0 .equ PFLASH
+    0 .equ RAMPZV
+    $0d00 .equ KERNEL_SIZE
+[then]
+
+FLASHEND $3fff = [if]               \ 16 Kwords flash
+    $8000   .equ OFLASH             \ 32 Kbytes available for FlashForth
+    OFLASH  .equ PFLASH
+    0       .equ RAMPZV
+    $0c80   .equ KERNEL_SIZE
+[then]
+
+FLASHEND $1fff = [if]               \ 8  Kwords flash
+    $C000 constant OFLASH           \ 16 Kbytes available for FlashForth
+    OFLASH  .equ PFLASH
+    0       .equ RAMPZV
+    $0c80   .equ KERNEL_SIZE=
+[then]
+
+
+\ Symbol naming compatilibity
+defined XXU4 [if]
+    \ UART1 symbols for Atmega32u4
+    UCSR1A  .equ UCSR0A
+    UDR1    .equ UDR0_
+    UCSR1B  .equ UCSR0B
+    UCSR1C  .equ UCSR0C
+    URXC1addr   .equ URXC0addr
+    RXEN1   .equ RXEN0
+    TXEN1   .equ TXEN0
+    RXCIE1  .equ RXCIE0
+    UCSZ10  .equ UCSZ00
+    USBS1   .equ USBS0
+    UBRR1H  .equ UBRR0H
+    UBRR1L  .equ UBRR0L
+    $00     .equ URSEL_
+[else]
+    defined UCSR0A invert [if]
+        \ UART0 symbols for Atmega32
+        UCSRA   .equ UCSR0A
+        UDR     .equ UDR0_
+        UCSRB   .equ UCSR0B
+        UCSRC   .equ UCSR0C
+        RXEN    .equ RXEN0
+        TXEN    .equ TXEN0
+        RXCIE   .equ RXCIE0
+        UCSZ0   .equ UCSZ00
+        USBS    .equ USBS0
+        UBRRH   .equ UBRR0H
+        UBRRL   .equ UBRR0L
+        $80 .equ URSEL_=0x80
+    [else]
+        UDR0    .equ UDR0_
+        0       .equ URSEL_
+    [endif]
+[endif]
+
+defined SPMCSR invert [if]
+    SPMCR   .equ SPMCSR
+[endif]
+
+defined SPMEN invert [if]
+    SELFPRGEN   .equ SPMEN
+[endif]
+
+defined SPMEN invert [if]
+    EEPE    .equ EEWE
+[endif]
+
+defined SPMEN invert [if]
+    EEMPE .equ EEMWE
+[endif]
+
+
+
+OPERATOR_UART 1 = [if]
+    TX1_    .equ OP_TX_
+    RX1_    .equ OP_RX_
+    RX1Q    .equ OP_RXQ
+[else]
+    OPERATOR_UART 0 = [if]
+\         TX0_    .equ OP_TX_  \ @TODO: voir création des labels
+\         RX0_    .equ OP_RX_
+\         RX0Q    .equ OP_RXQ
+    [else]
+        OPERATOR_UART 3 = [if]
+            TXU_    .equ OP_TX_
+            RXU_    .equ OP_RX_=
+            RXUQ_   .equ OP_RXQ=
+        [endif]
+    [endif]
+[endif]
+
+
+\ #define ubrr0val (FREQ_OSC/16/BAUDRATE0) - 1
+\ #define ubrr1val (FREQ_OSC/16/BAUDRATE1) - 1
+FREQ_OSC $10 / BAUDRATE0 / 1 -  .equ ubrr0val
+FREQ_OSC $10 / BAUDRATE0 / 1 -  .equ ubrr1val
+
+
+FREQ_OSC 16384000 < [if]    \ Hz
+    FREQ_OSC 1000 / 64 / 1 -    .equ ms_value_tmr0
+    FREQ_OSC 1000 / 1 -         .equ ms_value_tmr1
+    FREQ_OSC 1000 / 64 / 1 -    .equ ms_value_tmr2
+    defined TCCR0B [if]
+        3   .equ ms_pre_tmr0
+    [endif]
+    defined TCCR0 [if]
+        4    .equ ms_pre_tmr0
+    [endif]
+    defined TCCR2B [if]
+        4   .equ ms_pre_tmr2
+    [endif]
+    defined TCCR2 [if]
+        3   .equ ms_pre_tmr2
+    [endif]
+[else]  \ FREQ_OSC >= 16384000 Hz
+    FREQ_OSC 1000 / 256 / 1 -   .equ ms_value_tmr0
+    FREQ_OSC 1000 / 1 -         .equ ms_value_tmr1
+    FREQ_OSC 1000 / 256 / 1 -   .equ ms_value_tmr2
+    defined TCCR0B [if]
+        4   .equ ms_pre_tmr0
+    [endif]
+    \ .ifdef TCCR0 [if]
+        6   .equ ms_pre_tmr0
+    [endif]
+    defined TCCR2B [if]
+        5   .equ ms_pre_tmr2
+    [endif]
+    defined TCCR2 [if]
+        4   .equ ms_pre_tmr2
+    [endif]
+[endif]
+
+
+
+
+FREQ_OSC 255 * 100000 /
+    .equ CPU_LOAD_VAL           \ (FREQ_OSC*255/100000)
+\ ..............................................................................
+\ Program Specific Constants (literals used in code)
+\ ..............................................................................
+\ Flash page size
+PAGESIZE 2 *
+    .equ PAGESIZEB              \ Page size in bytes
+
+\ Forth word header flags
+$80 .equ NFA        \ Name field mask
+$40 .equ IMMED      \ Immediate mask
+$20 .equ INLINE     \ Inline mask for 1 and 2 cell code
+$00 .equ INLINE4    \ Inline mask for 4 cell code
+$00 .equ INLINE5    \ Inline mask for 5 cell code
+$10 .equ COMPILE    \ Compile only mask
+$0f .equ NFAmask    \ Name field length mask
+
+\ FLAGS2
+\ .equ fIDLE=     6   \ 0 = busy, 1 = idle
+\ .equ fLOAD=     5   \ Load measurement ready
+\ .equ fLOADled=  4   \ 0 = no load led, 1 = load led on
+\ .equ fFC_tx1=   3   \ 0=Flow Control, 1 = no Flow Control
+\ .equ fFC_tx0=   2   \ 0=Flow Control, 1 = no Flow Control
+\ .equ ixoff_tx1= 1
+\ .equ ixoff_tx0= 0
+
+\ FLAGS1
+\ .equ fLIT=    7     \ Literal compiled
+\ .equ noclear= 6     \ dont clear optimisation flags
+\ .equ idup=    5     \ Use dupzeroequal instead of zeroequal
+\ .equ izeroeq= 4     \ Use brne instead of breq if zeroequal
+\ .equ istream= 3
+\ .equ fLOCK=   2
+\ .equ fTAILC=  1
+\ .equ idirty=  0
+
+\ For Flow Control
+$11 .equ XON
+$13 .equ XOFF
+
+$0d .equ CR_
+$0a .equ LF_
+$08 .equ BS_
+$09 .equ TAB_
+
+
+
+defined USBCON [if]
+    $01c0   .equ USB_CODE
+[else]
+    $0000   .equ USB_CODE
+[endif]
+
+\ Memory mapping prefixes
+\ .equ PRAM    = 0x0000                 \ 8 Kbytes of ram (atm2560)
+\ .equ PEEPROM = RAMEND+1               \ 4 Kbytes of eeprom (atm2560)
+\ .if (FLASHEND == 0x1ffff)             \ 128 Kwords flash
+    \ .equ OFLASH  = PEEPROM+EEPROMEND+1    \ 52 Kbytes available for FlashForth(atm2560)
+    \ .equ PFLASH  = 0
+    \ .equ RAMPZV  = 3
+    \ .equ EIND__ = 1
+    \ .equ KERNEL_SIZE=0x0d80 + USB_CODE
+\ .else
+    \ .if (FLASHEND == 0xffff)              \ 64 Kwords flash
+        \ .equ OFLASH  = PEEPROM+EEPROMEND+1    \ 56 Kbytes available for FlashForth(atm128)
+        \ .equ PFLASH  = 0
+        \ .equ RAMPZV  = 1
+        \ .equ KERNEL_SIZE=0x0d00 + USB_CODE
+    \ .else
+        \ .if (FLASHEND == 0x7fff)              \ 32 Kwords flash
+            \ .equ OFLASH = PEEPROM+EEPROMEND+1     \ 56 Kbytes available for FlashForth
+            \ .equ PFLASH = 0
+            \ .equ RAMPZV  = 0
+            \ .equ KERNEL_SIZE=0x0d00 + USB_CODE
+        \ .else
+            \ .if (FLASHEND == 0x3fff)              \ 16 Kwords flash
+                \ .equ OFLASH = 0x8000                  \ 32 Kbytes available for FlashForth
+                \ .equ PFLASH = OFLASH
+                \ .equ RAMPZV  = 0
+                \ .equ KERNEL_SIZE=0x0c80 + USB_CODE
+            \ .else
+                \ .if (FLASHEND == 0x1fff)              \ 8  Kwords flash
+                    \ .equ OFLASH = 0xC000                  \ 16 Kbytes available for FlashForth
+                    \ .equ PFLASH = OFLASH
+                    \ .equ RAMPZV  = 0
+                    \ .equ KERNEL_SIZE=0x0c80 + USB_CODE
+                \ .endif
+            \ .endif
+        \ .endif
+    \ .endif
+\ .endif
+\ .equ BOOT_SIZE=0x400
+\ .equ BOOT_START=FLASHEND - BOOT_SIZE + 1  \ atm128: 0xfc00, atm328: 0x3c00
+\ .equ KERNEL_START=BOOT_START - KERNEL_SIZE
+
+\ High values for memory areas
+\ .equ FLASH_HI = (0xffff - (BOOT_SIZE*2) - (KERNEL_SIZE*2))& 0xFF00
+\ .equ EEPROM_HI = PEEPROM + EEPROMEND
+\ .equ RAM_HI = RAMEND
+
+\ USER AREA for the OPERATOR task
+\ .equ ursize=       RETURN_STACK_SIZE
+\ .equ ussize=       PARAMETER_STACK_SIZE
+\ .equ utibsize=     TIB_SIZE
+
+\ User variables and area
+\ .equ us0=          -28         \ Start of parameter stack
+\ .equ ur0=          -26         \ Start of ret stack
+\ .equ uemit=        -24         \ User EMIT vector
+\ .equ ukey=         -22         \ User KEY vector
+\ .equ ukeyq=        -20         \ User KEY? vector
+\ .equ ubase=        -18         \ Number Base
+\ .equ utib=         -16         \ TIB address
+\ .equ utask=        -14         \ Task area pointer
+\ .equ ustatus=      -12
+\ .equ uflg=         -11
+\ .equ usource=      -10         \ Two cells
+\ .equ utoin=        -6          \ Input stream
+\ .equ ulink=        -4          \ Task link (up0)
+\ .equ ursave=       -2          \ Saved ret stack pointer
+\ .equ uhp=           0          \ Hold pointer
+
+
+\ \\\ Variables in EEPROM
+\ .equ eeprom=       PEEPROM
+\ .equ dp_start=     eeprom + 0x0000 \ TURNKEY
+\ .equ dp_flash=     eeprom + 0x0002 \ FLASH dictionary pointer
+\ .equ dp_eeprom=    eeprom + 0x0004 \ EEPROM dictionary pointer
+\ .equ dp_ram=       eeprom + 0x0006 \ RAM dictionary pointer
+\ .equ latest=       eeprom + 0x0008 \ Pointer to latest dictionary word
+\ .equ prompt=       eeprom + 0x000a \ Deferred prompt
+\ .equ ehere=        eeprom + 0x000c
+
+\ \****************************************************
+\ .dseg
+\ .ifdef USBCON
+\ .org 0x110
+\ .endif
+\ ibuf:         .byte PAGESIZEB
+\ ivec:         .byte INT_VECTORS_SIZE
+
+\ rxqueue0:
+\ rbuf0_wr:    .byte 1
+\ rbuf0_rd:    .byte 1
+\ rbuf0_lv:    .byte 1
+\ rbuf0:       .byte RX0_BUF_SIZE
+
+\ .if UARTS == 2
+\ rxqueue1:
+\ rbuf1_wr:    .byte 1
+\ rbuf1_rd:    .byte 1
+\ rbuf1_lv:    .byte 1
+\ rbuf1:       .byte RX1_BUF_SIZE
+\ .endif
+
+\ litbuf0:    .byte 1
+\ litbuf1:    .byte 1
+
+\ dpSTART:    .byte 2
+\ dpFLASH:    .byte 2 \ DP's and LATEST in RAM
+\ dpEEPROM:   .byte 2
+\ dpRAM:      .byte 2
+\ dpLATEST:   .byte 2
+
+\ iaddrl:     .byte 1
+\ iaddrh:     .byte 1
+\ .ifdef RAMPZ
+    \ iaddru:	    .byte 1
+    \ ibaseu:	    .byte 1
+\ .endif
+
+\ .if IDLE_MODE == 1
+    \ .if CPU_LOAD == 1
+        \ load_acc:   .byte 3 \ Load measurement accumulator
+        \ load_res:   .byte 3 \ Load result
+    \ .endif
+\ .endif
+
+1 .byte cse     \ Current data section 0=flash, 1=eeprom, 2=ram
+\ state:      .byte 1 \ Compilation state
+\ uvars:      .byte   (-us0)
+\ up0:        .byte   2
+\ urbuf:      .byte   ursize
+\ usbuf:      .byte   ussize
+\ utibbuf:    .byte   utibsize
+\ dpdata:     .byte   2
+
 
 
 
