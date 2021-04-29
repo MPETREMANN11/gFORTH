@@ -2,7 +2,7 @@
 \ MACROS adapted from macros.inc                                      *
 \    Filename:      macros.txt                                        *
 \    Date:          26.03.2021                                        *
-\    Updated:       09.04.2021                                        *
+\    Updated:       29.04.2021                                        *
 \    MCU:           gForth                                            *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
@@ -19,9 +19,9 @@ R7      .def r_two          \ read only two
 R8      .def t8             \ Not in interrupt
 R9      .def wflags         \ not in interrupt
 
-R4      .def loadreg0 
-R12     .def loadreg1  
-R13     .def loadreg2 
+R4      .def loadreg0
+R12     .def loadreg1
+R13     .def loadreg2
 
 
 R10     .def ibasel         \ Not in interrupt
@@ -33,21 +33,21 @@ r17     .def t1
 \   .def t2 = r0          \ Not in interrupt
 \   .def t3 = r1          \ Not in interrupt
 
-\   .def al = r18
-\   .def ah = r19
-\   .def pl = r20         \ P Register and FOR..LOOP INDEX variable
-\   .def ph = r21
+R18     .def al
+R19     .def ah
+R20     .def pl             \ P Register and FOR..LOOP INDEX variable
+R21     .def ph
 
 \   .def FLAGS1 = r22     \ Not in interrupt
 \   .def FLAGS2 = r23     \ Not in interrupt
-r24     .def tosl
-r25     .def tosh
-\ \  xl = r26
-\ \  xh = r27
-\ \  yl = r28  \ StackPointer Ylo
-\ \  yh = r29  \ StackPointer Yhi
-\ \  zl = r30
-\ \  zh = r31
+R24     .def tosl
+R25     .def tosh
+\ xl = r26
+\ xh = r27
+\ yl = r28  \ StackPointer Ylo
+\ yh = r29  \ StackPointer Yhi
+\ zl = r30
+\ zh = r31
 R26     .def t4
 R27     .def t5
 R30     .def t6
@@ -108,69 +108,81 @@ R31     .def t7
 \ .endif
 \ .endmacro
 
-\ .macro sub_pflash_z
-\ .if (PFLASH > 0)
-\         subi    zh, high(PFLASH)
-\ .endif
-\ .endmacro
 
-\ .macro add_pflash_z
-\ .if (PFLASH > 0)
-\         subi    zh, high(0x10000-PFLASH)
-\ .endif
-\ .endmacro
+.macro sub_pflash_z
+    PFLASH 0 > if
+        zh PFLASH HIGH subi,
+    endif
+.endmacro
 
-\ .macro sub_pflash_tos
-\ .if (PFLASH > 0)
-\         subi    tosh, high(PFLASH)
-\ .endif
-\ .endmacro
 
-\ .macro add_pflash_tos
-\ .if (PFLASH > 0)
-\         subi    tosh, high(0x10000-PFLASH)
-\ .endif
-\ .endmacro
+.macro add_pflash_z
+    PFLASH 0 > if
+        \ subi    zh, high(0x10000-PFLASH)
+        zh $10000 PFLASH HIGH subi,    
+    endif
+.endmacro
 
-\ .macro rampv_to_c
-\ .if (FLASHEND >= 0x8000)
-\         bset    0
-\ .else
-\         bclr    0
-\ .endif
-\ .endmacro
+
+.macro sub_pflash_tos
+    PFLASH 0 > if
+        \ subi    tosh, high(PFLASH)
+        tosh PFLASH HIGH subi,   
+    endif
+.endmacro
+
+
+.macro add_pflash_tos
+    PFLASH 0 > if
+        \ subi    tosh, high(0x10000-PFLASH)
+        tosh $10000 PFLASH - HIGH subi,
+    endif
+.endmacro
+
+
+.macro rampv_to_c
+    FLASHEND $8000 > if
+        0 bset,
+    else
+        0 bclr,
+    endif
+.endmacro
 
 \ .macro fdw
 \   .dw ((@0<<1)+PFLASH)
 \ .endmacro
 
-\ .macro m_pop_zh
-\ .if (FLASHEND > 0xffff)
-\         pop     zh
-\ .endif
-\ .endmacro
-\ .macro m_pop_xh
-\ .if (FLASHEND > 0xffff)
-\         pop     xh
-\  .endif
-\ .endmacro
-\ .macro m_pop_t0
-\ .if (FLASHEND > 0xffff)
-\         pop     t0
-\  .endif
-\ .endmacro
-\ .macro m_push_t0
-\ .if (FLASHEND > 0xffff)
-\         push    t0
-\  .endif
-\ .endmacro
-\ .macro mijmp
-\ .if (FLASHEND > 0xffff)
-\         eijmp
-\ .else
-\         ijmp
-\ .endif
-\ .endmacro
+.macro m_pop_zh
+    FLASHEND $ffff > if
+        zh pop,
+    endif
+.endmacro
+
+.macro m_pop_xh
+    FLASHEND $ffff > if
+        xh pop,
+    endif
+.endmacro
+
+.macro m_pop_t0
+    FLASHEND $ffff > if
+        t0 pop,
+    endif
+.endmacro
+
+.macro m_push_t0
+    FLASHEND $ffff > if
+        t0 push,
+    endif
+.endmacro
+
+.macro mijmp
+    FLASHEND $ffff > if
+        eijmp,
+    else
+        ijmp,
+    endif
+.endmacro
 
 
 \ *** End of File ***********************
