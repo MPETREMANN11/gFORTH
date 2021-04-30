@@ -2,7 +2,7 @@
 \ MACROS adapted from macros.inc                                      *
 \    Filename:      macros.txt                                        *
 \    Date:          26.03.2021                                        *
-\    Updated:       29.04.2021                                        *
+\    Updated:       30.04.2021                                        *
 \    MCU:           gForth                                            *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
@@ -64,23 +64,27 @@ R31     .def t7
     -Y tosl st,
 .endmacro
 
-\ .macro in_
-\ .if (@1 < $40)
-\   in @0,@1
-\ .else
-\   lds @0,@1
-\ .endif
-\ .endmacro
 
-\ .macro out_
-\ .if (@0 < $40)
-\   out @0,@1
-\ .else
-\   sts @0,@1
-\ .endif
-\ .endmacro
+.macro in_ { @0 @1 -- }
+    @1 $40 <
+    if
+        @0 @1 inn,
+    else
+        @0 @1 lds,
+    endif
+.endmacro
 
-\ .macro sbi_
+
+.macro out_  { @0 @1 -- }
+    @0 $40 <
+    if
+        @0 @1 out, 
+    else
+        @0 @1 sts, 
+    endif
+.endmacro
+
+\ .macro sbi_  { @0 @1 -- }
 \ .if (@0 < $40)
 \   sbi @0,@1
 \ .else
@@ -90,7 +94,7 @@ R31     .def t7
 \ .endif
 \ .endmacro
 
-\ .macro cbi_
+\ .macro cbi_  { @0 @1 -- }
 \ .if (@0 < $40)
 \   cbi @0,@1
 \ .else
@@ -100,7 +104,7 @@ R31     .def t7
 \ .endif
 \ .endmacro
 
-\ .macro lpm_
+\ .macro lpm_ 
 \ .if (FLASHEND < 0x8000) \ Word address
 \         lpm @0,@1
 \ .else
@@ -148,9 +152,10 @@ R31     .def t7
     endif
 .endmacro
 
-\ .macro fdw
-\   .dw ((@0<<1)+PFLASH)
-\ .endmacro
+.macro fdw { @0 -- }
+    @0 1 <<   PFLASH +
+    .dw
+.endmacro
 
 .macro m_pop_zh
     FLASHEND $ffff > if
