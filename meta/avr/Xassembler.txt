@@ -6,7 +6,7 @@
 \    Copyright:     Mikael Nordman                                    *
 \    Author:        Mikael Nordman                                    *
 \ adapted for gForth by Marc PETREMANN 26.03.2021                     *
-\    Updated:       29.04.2021                                        *
+\    Updated:       30.04.2021                                        *
 \ *********************************************************************
 \  FlashForth is licensed acording to the GNU General Public License  *
 \ *********************************************************************
@@ -17,7 +17,7 @@
     vocabulary Xassembler
 [then]
 
-also Xassembler 
+also Xassembler
 Xassembler definitions
 
 
@@ -36,12 +36,13 @@ forth ' ,  Xassembler is ,
 
 
 
+
 \ Combine the opcode with the operand fields
 : mask! { dest1 opcode mask -- instruction }    \ WARNING: locals variables
     mask invert  dest1 and
     opcode mask and
     or      \ dest1&!mask src&mask or
-    ; 
+    ;
 
 \ Fetch src and mask from addr and append to dictionary via mask
 : mask,  ( dest1 addr -- )
@@ -73,7 +74,7 @@ forth ' ,  Xassembler is ,
   does> >r
     $ff and dup $4 lshift or $f0f and   \ -- Rd kkkk0000kkkk
     swap $4 lshift $f0 and              \ -- kk dddd0000
-    or r> mask, ;                       \ kkdd opcode mask mask! 
+    or r> mask, ;                       \ kkdd opcode mask mask!
 
 \ Operands Rd,Rr,constant 6bit
 : Rd,Rr+q:  ( Rd Rr k6 opcode mask -- xxkx.kkxd.dddd.rkkk )
@@ -83,7 +84,7 @@ forth ' ,  Xassembler is ,
     dup $1000 and $1 lshift or or $2c07 and  \ -- Rd Rr kxkkxxxxxxxkkk
     rot $4 lshift $1f0 and              \ -- Rr kk ddddd0000
     or swap 8 and                       \ -- kkdd rxxx
-    or r> mask, ;                 \ kkddrr opcode mask mask! 
+    or r> mask, ;                 \ kkddrr opcode mask mask!
 
 
 \ Operands Rw pair,constant 6bit
@@ -93,14 +94,14 @@ forth ' ,  Xassembler is ,
     $3f and dup $2 lshift $c0 and      \ -- Rw k6 kk000000
     swap $f and or                     \ -- Rw kk00kkkk
     swap $4 lshift $30 and             \ -- kk ww0000
-    or r> mask, ;                      \ kkww opcode mask mask! 
+    or r> mask, ;                      \ kkww opcode mask mask!
 
 \ Operands P-port,bit
 : P,b:      ( P b opcode mask -- xxxx.xxxx.PPPP.Pbbb )
   create,,
   does> >r
     $7 and swap $3 lshift              \ -- 0bbb PPPPP000
-    or r> mask, ;                      \ PPbb opcode mask mask! 
+    or r> mask, ;                      \ PPbb opcode mask mask!
 
 \ Operands Rd,P-port
 : Rd,P:     ( Rd P opcode mask -- xxxx.xPPd.dddd.PPPP )
@@ -108,7 +109,7 @@ forth ' ,  Xassembler is ,
   does> >r
     $3f and dup $5 lshift or $60f and  \ -- Rd PP00000PPPP
     swap $4 lshift $1f0 and            \ -- PP 00ddddd0000
-    or r> mask, ;                      \ ddPP opcode mask mask! 
+    or r> mask, ;                      \ ddPP opcode mask mask!
 
 
 \ Operand k16 k6
@@ -116,9 +117,9 @@ forth ' ,  Xassembler is ,
   create,,
   does> >r
     dup $1 and swap $3 lshift          \ -- 000k kkkkkk000
-    or r> mask,  , ;                  \ k16 kk opcode mask mask! 
+    or r> mask,  , ;                  \ k16 kk opcode mask mask!
 
-\ Opcode 
+\ Opcode
 : op:       ( opcode -- )
    create ,  does> @ , ;
 
@@ -251,14 +252,14 @@ $f00f constant ie,   \ if/until interrupt enabled
 
 \ @TODO: à adapter au contexte gForth
 \ : if, ( cc -- addr)
-\    , [ ' if #8 + pfl - zfl d2/ jmp, ] 
+\    , [ ' if #8 + pfl - zfl d2/ jmp, ]
 \    ;
 : else, postpone else ;
 : then, postpone then ;
 : begin, postpone begin ;
-: until, ( addr cc -- ) 
+: until, ( addr cc -- )
     , postpone again ;
-: again, ( addr -- ) 
+: again, ( addr -- )
     postpone again ;
 
 $00 constant Z
@@ -316,20 +317,20 @@ $03  constant ZH:ZL
 
 \ *** clone assembly directives ***********************************
 
-\ Defines a symbol and sets its value 
-\ later changes of this value remain possible, syntax: 
+\ Defines a symbol and sets its value
+\ later changes of this value remain possible, syntax:
 \ 1234 .equ test
 : .equ  ( comp: n -- <name> | exec: -- n)
     >in @ >r
     bl word
     count 2dup
     find-name       \ leave nfa or 0
-    ?dup            
+    ?dup
     if              \ word defined
         r> drop
         name>int    \ nfa > cfa
         16 + >r     \ cfa > pfa  @TODO vérifier '16' !!!!!
-        2drop r> !  \ store value         
+        2drop r> !  \ store value
     else            \ word undefined
         drop
         r> >in !
@@ -345,7 +346,7 @@ $03  constant ZH:ZL
 
 \ Fixes the value of a symbole
 \ later redefinition is not possible, syntax:
-\ 123 .set ONE_TWO_THREE 
+\ 123 .set ONE_TWO_THREE
 : .set ( comp: n -- <name> | exec: -- n)
     constant
     ;
@@ -357,9 +358,9 @@ $03  constant ZH:ZL
 
 
 
-\ Define constant byte(s) in program memory and EEPROM.
+\ Define constant 1 bytes in program memory and EEPROM.
 : .db ( c --)
-    ?dup $ff >
+    dup $ff >
     if
         abort" too big"
         exit
@@ -367,9 +368,9 @@ $03  constant ZH:ZL
     c,
     ;
 
-\ Define constant byte(s) in program memory and EEPROM.
-: .dw ( c --)
-    ?dup $ffff >
+\ Define constant 2 bytes in program memory and EEPROM.
+: .dw ( n --)
+    dup $ffff >
     if
         abort" too big"
         exit
@@ -390,12 +391,38 @@ $03  constant ZH:ZL
 \ *** ASSEMBLER directives definitions *********
 
 : .macro ( exec: -- <name>)
-    : 
+    :
     ;
 
 : .endmacro ( --)
-    postpone ; 
+    postpone ;
     ; immediate
+
+
+\ *** clone ASSEMBLER operators ******************
+
+\ LSHIFT u1 value n shifts
+: << ( u1 n --)
+    lshift
+    ;
+
+\ RSHIFT u1 value n shifts
+: >> ( u1 n --)
+    rshift
+    ;
+
+\ logical OR
+: || ( fl1 fl2 --)
+    or
+    ;
+
+\ logical AND
+: && ( fl1 fl2 --)
+    and
+    ;
+
+
+
 
 
 \ *** END directives definitions ****
@@ -408,7 +435,7 @@ $03  constant ZH:ZL
     base @ >r
     s>d <# # # #> type space
     r> base ! ;
-    
+
 : .HHHH ( n --)
     base @ >r
     s>d <# # # # # #> type space
