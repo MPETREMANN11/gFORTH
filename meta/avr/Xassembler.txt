@@ -6,11 +6,11 @@
 \    Copyright:     Mikael Nordman                                    *
 \    Author:        Mikael Nordman                                    *
 \ adapted for gForth by Marc PETREMANN 26.03.2021                     *
-\    Updated:       30.04.2021                                        *
+\    Updated:       02.05.2021                                        *
 \ *********************************************************************
 \  FlashForth is licensed acording to the GNU General Public License  *
 \ *********************************************************************
-\ FlashForth assembler for Atmega chips
+\ FlashForth Cross assembler for Atmega chips
 
 \ define Xassembler vocabulary
 [ifundef] Xassembler
@@ -34,15 +34,24 @@ forth ' ,  Xassembler is ,
 \ OFLASH  constant pfl
 \ RAMPZV  constant zfl     \ value [0..3]
 
-
+\ redefine invert for 16 bits usage
+: Winvert ( x1 -- x2 )
+    $ffff xor ;
 
 
 \ Combine the opcode with the operand fields
-: mask! { dest1 opcode mask -- instruction }    \ WARNING: locals variables
-    mask invert  dest1 and
-    opcode mask and
-    or      \ dest1&!mask src&mask or
-    ;
+\ : mask! { dest1 opcode mask -- instruction }    \ WARNING: locals variables
+\     mask Winvert  dest1 and
+\     opcode mask and
+\     or      \ dest1&!mask src&mask or
+\     ;
+
+\ Combine the opcode with the operand fields
+: mask! ( dest1 opcode mask -- instruction )
+    rot over Winvert and rot rot and or ; \ dest1&!mask src&mask or
+
+
+
 
 \ Fetch src and mask from addr and append to dictionary via mask
 : mask,  ( dest1 addr -- )
@@ -152,11 +161,11 @@ $5000 $f000  Rd,k: subi,         \ Rd k --
 $6000 $f000  Rd,k: ori,          \ Rd k --
 : sbr,    ori, ;               \ Rd k --
 $7000 $f000  Rd,k: andi,         \ Rd k --
-: cbr,    invert andi, ;
+: cbr,    Winvert andi, ;
 $e000 $f000  Rd,k: ldi,
 
 
-$8000 $d200  Rd,Rr+q: ldd, ( Rd Rr q -- ) \ Rr={Z+,Y+}, 2 Y+ 3F ldd,
+$8000 $d200  Rd,Rr+q: ldd, ( Rd Rr q -- ) \ Rr={Z+,Y+}, 2 Y+ 3F ldd,  \ @TODO to debug
 $8200 $d200  Rd,Rr+q: std, ( Rr Rd q -- ) \ Rd={Z+,Y+}, Y+ 3F 2 std,
 
 $9000 $fe00  Rd,Rr: ld,  ( Rd Rr -- ) \ Rr={Z+,-Z,Y+,-Y,X+,-X,X,Y,Z}
@@ -234,7 +243,8 @@ $fe00 $fe08  Rd,Rr: sbrs, \ Rd b --
 
 $940c $fe0e   k22: jmp,   ( k16 k6 -- ) \ k6=0 for 16b addr
 $940e $fe0e   k22: call,  ( k16 k6 -- ) \ k6=0 for 16b addr
-: rjmp,   $c000 $f000  mask! , ; ( k12 -- )
+: rjmp,
+$c000 $f000  mask! , ; ( k12 -- )
 : rcall,  $d000 $f000  mask! , ; ( k12 -- )
 
 
@@ -251,16 +261,31 @@ $f00f constant ie,   \ if/until interrupt enabled
 : not, $0400 xor ;   \ Invert the condition code
 
 \ @TODO: à adapter au contexte gForth
-\ : if, ( cc -- addr)
-\    , [ ' if #8 + pfl - zfl d2/ jmp, ]
-\    ;
-: else, postpone else ;
-: then, postpone then ;
-: begin, postpone begin ;
-: until, ( addr cc -- )
-    , postpone again ;
-: again, ( addr -- )
-    postpone again ;
+[ifdef] meta
+    : if, ( cc -- addr)
+\         break" if, : "
+        , here-t
+        ;
+    : else, 
+        
+        ;
+    : then, 
+
+        ;
+    : begin, 
+\         break" begin, : "
+        here-t 
+        ;
+    : again, ( addr -- )
+\         break" again, : "
+        rjmp,
+        ;
+    : until, ( addr cc -- )
+\         break" until, : "
+        , 
+        here-t - 2/ rjmp, 
+        ;
+[endif]
 
 $00 constant Z
 $01 constant Z+
