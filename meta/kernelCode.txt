@@ -1,0 +1,51 @@
+\ *********************************************************************
+\ * High level definitions of FORTH words                             *
+\    Date:          05.04.2021                                        *
+\    FF Version:    5.0                                               *
+\    MCU:           All -- gForth metacompilation                     *
+\    Copyright:     Marc PETREMANN                                    *
+\    Author:        Marc PETREMANN                                    *
+\    Updated:       05.04.2021                                        *
+\ *********************************************************************
+
+cr ." kernelCode.txt"
+
+
+\ output a space
+: space  ( --)
+    bl emit 
+    ;
+
+
+\ align DP
+: align ( -- )
+    here aligned
+    dp !
+    ;
+
+
+: 2@ ( addr -- d )
+    dup @
+    swap cell + @
+    ;
+
+
+: u> ( u1 u2 -- fl )
+    swap u<
+    ;
+
+
+
+: = ( n1 n2 -- fl )
+    -  0=
+    ;
+
+
+: <> ( n1 n2 -- fl )
+    =  0=
+    ;
+
+
+
+
+\ *** End of File ***********************
