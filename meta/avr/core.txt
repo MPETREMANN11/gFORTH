@@ -2,7 +2,7 @@
 \ FlashForth primitives in assembler and words in FORTH language      *
 \    Filename:      core.txt                                          *
 \    Date:          11.04.2021                                        *
-\    Updated:       02.05.2021                                        *
+\    Updated:       05.05.2021                                        *
 \    MCU:           Atmega                                            *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
@@ -10,8 +10,10 @@
 \ adapted from ff-atmega.asm - author Mickael NORDMANN                *
 \ *********************************************************************
 
+cr ."   avr/    core.txt"
 
-Xassembler definitions
+\ set order: only forth also   Xassembler definitions also
+\ in-Xassembler
 
 \ Define FF version date string
 string DATE
@@ -36,7 +38,7 @@ forth
 \ .endif
 \ ***********************************************************
 
-\ Xassembler
+Xassembler
 
 
 
@@ -50,7 +52,7 @@ forth
 \         poptos
 \         mijmp
 
-." here-t : " here-t . cr
+\ ." here-t : " here-t . cr
 
 code >r ( n ---)
   label TOR
@@ -238,14 +240,7 @@ label INIT_012
     ret,
 
 
-\         .db     NFA|INLINE4|3, "and"
-\ AND_:
-\         ld      t0, Y+
-\         ld      t1, Y+
-\         and     tosl, t0
-\         and     tosh, t1
-\         ret
-
+\ AND bitwise  ::  tested OK 05may2021
 code and ( n1 n2 -- n3)
   label AND_
     t0 Y+ ld,
@@ -255,15 +250,9 @@ code and ( n1 n2 -- n3)
     ret,
 end-code
 
-\         .db     NFA|INLINE4|2, "or",0
-\ OR_:
-\         ld      t0, Y+
-\         ld      t1, Y+
-\         or      tosl, t0
-\         or      tosh, t1
-\         ret
 
-code or ( n1 n2 -- n3)
+\ OR bitwise  ::  tested OK 05may2021
+code or ( n1 n2 -- n3 )
   label OR_
     t0 Y+ ld,
     t1 Y+ ld,
@@ -273,19 +262,10 @@ code or ( n1 n2 -- n3)
 end-code
 
 
-\         .db     NFA|INLINE4|3, "xor"
-\ XOR_:
-\         ld      t0, Y+
-\         ld      t1, Y+
-\         eor     tosl, t0
-\         eor     tosh, t1
-\         ret
-\
-\         fdw     XOR_L
-
-code xor
+\ XOR bitwise  ::  tested OK 05may2021
+code xor ( n1 n2 -- n3 )
   label XOR_
-    t1 Y+ ld,
+    t0 Y+ ld,
     t1 Y+ ld,
     tosl t0 eor,
     tosh t1 eor,
@@ -307,14 +287,8 @@ code invert
 end-code
 
 
-\         .db     NFA|6, "negate",0
-\ NEGATE:
-\         com     tosl
-\         com     tosh
-\         adiw    tosl, 1
-\         ret
-
-code negate
+\ invert sign of n  ::  tested OK 05may2021
+code negate ( n -- -n )
   label NEGATE
     tosl com,
     tosh com,
@@ -420,24 +394,16 @@ end-code
 
 
 
-\         .db     NFA|7,"execute"
-\ EXECUTE:
-\         movw    zl, tosl
-\         sub_pflash_z
-\         poptos
-\         rampv_to_c
-\         ror     zh
-\         ror     zl
-\         mijmp
-
-code execute ( cfa --)
+\ execute words from it cfa  ::  tested OK 05may2021
+\ example:  ' words execute
+code execute ( cfa -- ) 
   label EXECUTE
-    zl tosl movw,
+    ZL tosl movw,
     sub_pflash_z
     poptos
     rampv_to_c
-    zh ror,
-    zl ror,
+    ZH ror,
+    ZL ror,
     mijmp
 end-code
 
@@ -492,15 +458,8 @@ end-code
 
 
 
-\         .db     NFA|INLINE4|1, "+"
-\ PLUS:
-\         ld      t0, Y+
-\         ld      t1, Y+
-\         add     tosl, t0
-\         adc     tosh, t1
-\         ret
-
-code +
+\ Addition of two integers  ::  tested OK 05may2021
+code + ( n1 n2 -- n1+n2 )
   label PLUS
     t0 Y+ ld,
     t1 Y+ ld,
@@ -510,31 +469,19 @@ code +
 end-code \ inline  @TODO: traiter directive "inline" et "immediate"
 
 
-\         .db     NFA|INLINE5|1, "-"
-\ MINUS:
-\         ld      t0, Y+
-\         ld      t1, Y+
-\         sub     t0, tosl
-\         sbc     t1, tosh
-\         movw    tosl, t0
-\         ret
-
+\ Substraction of two integers  ::  tested OK 05may2021
 code - ( n1 n2 -- n1-n2)
   label MINUS
     t0 Y+ ld,
     t1 Y+ ld,
     t0 tosl sub,
-    t1 tosl sbc,
+    t1 tosh sbc,
     tosl t0 movw,
     ret,
 end-code \ inline  @TODO: traiter directive "inline" et "immediate"
 
 
-\         .db     NFA|INLINE|2, "1+",0
-\ ONEPLUS:
-\         adiw    tosl, 1
-\         ret
-
+\ increment integer 1 unit  ::  tested OK 05may2021
 code 1+ ( n -- n+1)
   label ONEPLUS
     tosl 1 adiw,
@@ -542,25 +489,15 @@ code 1+ ( n -- n+1)
 end-code
 
 
-\         .db     NFA|INLINE|2, "1-",0
-\ ONEMINUS:
-\         sbiw    tosl, 1
-\         ret
+\ decrement integer 1 unit  ::  tested OK 05may2021
+code 1- ( n -- n-1)
+  label ONEMINUS
+    tosl 1 sbiw,
+    ret,
+end-code
 
 
-\ code 1- ( n -- n-1)
-\   label ONEMINUS
-\     tosl 1 sbiw,
-\     ret,
-\ end-code
-
-
-
-\         .db     NFA|INLINE|2, "2+",0
-\ TWOPLUS:
-\         adiw    tosl, 2
-\         ret
-
+\ increment integer 2 units  ::  tested OK 05may2021
 code 2+ ( n -- n+2)
   label TWOPLUS
     tosl 2 adiw,
@@ -642,13 +579,8 @@ code mtst ( mask addr -- flag)
 end-code
 
 
-\         .db     NFA|INLINE|2, "2*",0
-\ TWOSTAR:
-\         lsl     tosl
-\         rol     tosh
-\         ret
-
-code 2*
+\ Multiply n by 2  ::  tested OK 05may2021
+code 2* ( n -- n*2 )
   label TWOSTAR
     tosl lsl,
     tosh rol,
@@ -656,14 +588,8 @@ code 2*
 end-code
 
 
-
-\         .db     NFA|INLINE|2, "2/",0
-\ TWOSLASH:
-\         asr     tosh
-\         ror     tosl
-\         ret
-
-code 2/
+\ Divide n by 2  ::  tested OK 05may2021
+code 2/ ( n -- n/2 )
   label TWOSLASH
     tosh asr,
     tosl ror,
@@ -671,12 +597,8 @@ code 2/
 end-code
 
 
-\         .db     NFA|INLINE|5, ">body"
-\ TOBODY:
-\         adiw    tosl, 4
-\         ret
-
-code >body
+\ convert cfa address to pfa address  ::  tested OK 05may2021
+code >body ( cfa -- pfa )
   label TOBODY
     tosl 4 adiw,
     ret,
@@ -692,7 +614,7 @@ end-code
 \         ret
 
 \ RP@ Fetch the return stack pointer
-code rp@
+code rp@ ( -- n )
   label RPFETCH
     pushtos
     tosl spl inn,
@@ -701,15 +623,9 @@ code rp@
 end-code
 
 
-\         .db     NFA|INLINE|2,"><",0
-\ SWAPB:
-\         mov     t0, tosl
-\         mov     tosl, tosh
-\         mov     tosh, t0
-\         ret
-
-\ ><  Swap bytes
-code ><
+\ Swap bytes from integer  ::  tested OK 05may2021
+\ example: hex aaff ><   \ push ffaa on stack
+code >< ( n1 -- n2 )
   label SWAPB
     t0 tosl mov,
     tosl tosh mov,
@@ -750,7 +666,6 @@ end-code
 \         ldi     t0, 4
 \         sts     cse, t0
 \         ret
-end-code
 
 \ RAM -- sets the data section to RAM memory
 code ram ( --)
@@ -1382,8 +1297,8 @@ end-code
 code false
   label FALSE_      \ TOS is 0000 (FALSE)
 pushtos
-    tosl clr,     
-    tosh clr,     
+    tosl clr,
+    tosh clr,
     ret,
 end-code
 
@@ -1398,8 +1313,8 @@ end-code
 code true
   label TRUE_       \ TOS is ffff (TRUE)
     pushtos
-    tosl ser,     
-    tosh ser,     
+    tosl ser,
+    tosh ser,
     ret,
 end-code
 
@@ -1417,8 +1332,8 @@ end-code
 code cell ( -- n )
   label CELL
     pushtos
-    tosl 2 ldi,     
-    tosh 0 ldi,     
+    tosl 2 ldi,
+    tosh 0 ldi,
     ret,
 end-code
 
@@ -1446,18 +1361,18 @@ end-code
 
 code d+
   label DPLUS
-    xl Y+ ld,      
-    xh Y+ ld,      
-    t6 Y+ ld,      
-    t7 Y+ ld,      
-    t0 Y+ ld,      
-    t1 Y+ ld,      
-    xl t0 add,     
-    xh t1 adc,     
-    tosl t6 adc,     
-    tosh t7 adc,     
-    -Y xh st,      
-    -Y xl st,      
+    xl Y+ ld,
+    xh Y+ ld,
+    t6 Y+ ld,
+    t7 Y+ ld,
+    t0 Y+ ld,
+    t1 Y+ ld,
+    xl t0 add,
+    xh t1 adc,
+    tosl t6 adc,
+    tosh t7 adc,
+    -Y xh st,
+    -Y xl st,
     ret,
 end-code
 
@@ -1466,14 +1381,14 @@ end-code
 
 code d2/
   label DTWOSLASH
-    t0 y+ ld,      
-    t1 y+ ld,      
-    tosh asr,     
-    tosl ror,     
-    t1 ror,     
-    t0 ror,     
-    -y t1 st,      
-    -y t0 st,      
+    t0 y+ ld,
+    t1 y+ ld,
+    tosh asr,
+    tosl ror,
+    t1 ror,
+    t0 ror,
+    -y t1 st,
+    -y t0 st,
     ret,
 end-code
 
@@ -1587,11 +1502,11 @@ end-code
 code lit ( -- x )
   label DOLIT
     m_pop_zh
-    zh pop,     
-    zl pop,     
-    FETCHLIT rcall,   
-    zh ror,     
-    zl ror,     
+    zh pop,
+    zl pop,
+    FETCHLIT rcall,
+    zh ror,
+    zl ror,
     mijmp    \ (z)
 end-code
 
@@ -1601,7 +1516,240 @@ end-code
 
 
 
-." here-t : " here-t . cr
+
+
+\ WARM_:
+\ Zero memory
+\         cli           \ Disable interrupts
+\         clr     xl
+\         clr     xh
+\         ldi     yl, 25
+\         ldi     yh, 0
+\ WARM_1:
+\         st      x+, yh
+\         subi    yl, 1
+\         brne    WARM_1
+\
+\         in_     t3, SREG
+\ .ifdef MCUCSR
+\         in_     t2, MCUCSR
+\         sts     MCUCSR, r_zero
+\ .endif
+\ .ifdef MCUSR
+\         in_     t2, MCUSR
+\         sts     MCUSR, r_zero
+\ .endif
+\         ldi     xh, high(SRAM_START)
+\
+\ .ifdef USBCON
+\   	    sbi_	USBCON, OTGPADE			\ Enable USB power pads
+\         ldi   xl, low(SRAM_START + 0x10)
+\ .else
+\         ldi   xl, low(SRAM_START)
+\ .endif
+
+
+\         .db     NFA|INLINE|5,"chars"
+\ CHARS:  ret
+
+\ chars->adrs units
+code chars ( n1 -- n2 )
+  label CHARS
+    ret,
+end-code
+
+
+\         .db     NFA|INLINE|2,"p+",0
+\ PPLUS:
+\         add     pl, r_one
+\         adc     ph, r_zero
+\         ret
+
+code p+ ( -- )
+  label PPLUS
+    pl r_one add,
+    ph r_zero adc,
+    ret,
+end-code
+
+
+\         .db     NFA|3,"p++"
+\ PNPLUS:
+\         add     pl, tosl
+\         adc     ph, tosh
+\         poptos
+\         ret
+
+code p++ ( -- )
+  label PNPLUS
+    pl tosl add,
+    ph tosh adc,
+    poptos
+    ret,
+end-code
+
+
+\ FROM_LITBUF:
+\         lds     r0, litbuf0
+\         lds     r1, litbuf1
+\         ret
+
+label FROM_LITBUF
+    r0 litbuf0 lds,
+    r1 litbuf1 lds,
+    ret,
+
+
+
+
+\ FF_ISR:
+\ .if IDLE_MODE == 1
+\ .if CPU_LOAD == 1
+\         out_    TCCR1B, r_one   \ Start load counter
+\ .endif
+\ .endif
+\         st      -y, xh
+\         in_     xh, SREG
+\         st      -y, xh
+\         st      -y, xl
+\         m_pop_xh
+\         pop     xh
+\         pop     xl
+\         push    zl
+\         push    zh
+\         push    t0
+\         push    t1
+\         push    tosl
+\         push    tosh
+\         ldi     t0, low(ivec-1)
+\         add     xl, t0
+\         ldi     xh, high(ivec)
+\         ld      zl, x+
+\         ld      zh, x+
+\         mijmp   \(z)
+
+label FF_ISR
+    IDLE_MODE 1 = [if]
+        CPU_LOAD 1 = [if]
+            TCCR1B r_one out_    TCCR1B r_one   \ Start load counter
+        [endif]
+    [endif]
+    -y xh st,
+    xh SREG in_
+    -y xh st,
+    -y xl st,
+    m_pop_xh
+    xh pop,
+    xl pop,
+    zl push,
+    zh push,
+    t0 push,
+    t1 push,
+    tosl push,
+    tosh push,
+    t0 ivec 1 - LOW  ldi,
+    xl t0 add,
+    xh ivec HIGH ldi,
+    zl x+ ld,
+    zh x+ ld,
+    mijmp   \ (z)
+
+
+\ .org BOOT_START + INT_VECTORS_SIZE - 1
+\ FF_ISR_EXIT:
+\         pop     tosh
+\         pop     tosl
+\         pop     t1
+\         pop     t0
+\         pop     zh
+\         pop     zl
+\ MS_TIMER_ISR_EXIT_LOAD:
+\         ld      xl, y+
+\         ld      xh, y+
+\ MS_TIMER_ISR_EXIT:
+\         out_    SREG, xh
+\         ld      xh, y+
+\         reti
+
+\ .org BOOT_START + INT_VECTORS_SIZE - 1
+label FF_ISR_EXIT
+    tosh pop,
+    tosl pop,
+    t1 pop,
+    t0 pop,
+    zh pop,
+    zl pop,
+label MS_TIMER_ISR_EXIT_LOAD
+    xl y+ ld,
+    xh y+ ld,
+label MS_TIMER_ISR_EXIT
+    SREG xh out_
+    xh y+ ld,
+    reti,
+
+\ RX1_ISR_SKIP_XOFF:
+\         ldi     zl, low(rbuf1)
+\         ldi     zh, high(rbuf1)
+\         lds     xl, rbuf1_wr
+\         add     zl, xl
+\         adc     zh, r_zero
+\         st      z, xh
+\         inc     xl
+\         andi    xl, (RX1_BUF_SIZE-1)
+\         sts     rbuf1_wr, xl
+\         rjmp    FF_ISR_EXIT
+
+UARTS 2 = [if]
+    label RX1_ISR_SKIP_XOFF
+        zl rbuf1 LOW   ldi,
+        zh rbuf1 HIGH  ldi,
+        xl rbuf1_wr lds,
+        zl xl add,
+        zh r_zero adc,
+        z xh st,
+        xl inc,
+        xl RX1_BUF_SIZE 1 - andi,
+        rbuf1_wr xl sts,
+    FF_ISR_EXIT rjmp,
+[endif]
+
+
+
+\         .db     NFA|2,"u<",0
+\ ULESS:
+\         rcall   MINUS       \ Carry is valid after MINUS
+\         sbc     tosl, tosl
+\         sbc     tosh, tosh
+\         ret
+
+code u< ( u1 u2 -- fl )
+  label ULESS
+    MINUS rcall,          \ Carry is valid after MINUS
+    tosl tosl sbc,
+    tosh tosh sbc,
+    ret,
+end-code
+
+
+
+\         .db     NFA|2, "0=",0
+\ ZEROEQUAL:
+\         sbiw    tosl, 1
+\         sbc     tosl, tosl
+\         sbc     tosh, tosh
+\         ret
+
+code 0= ( n1 -- fl )
+  label ZEROEQUAL
+    tosl 1 sbiw,    
+    tosl tosl sbc,     
+    tosh tosh sbc,     
+    ret,
+end-code
+
+
+
+\ ." here-t : " here-t . cr
 \ *** @END provisoire kernel en cours de réécriture ***************************
 
 \ words in FF 5.0 dictionnary to convert in meta instructions:
@@ -1613,9 +1761,9 @@ end-code
 \ >in tiu tib ti# number? >number ud/mod ud* sign? digit? find immed? (f) c>n n>c
 \ @+ c@+ place cmove word parse \ /string source user base pad hp task ulink
 \ rsave bin hex decimal . u.r u. sign #> #s # digit <# hold up min max ?negate tuck
-\ nip / u*/mod u/ * u/mod um/mod um* 'key? 'key 'emit p++ p+ pc! p! p@ !p u> u< > < = 0< 0= <> within +!
+\ nip / u*/mod u/ * u/mod um/mod um* 'key? 'key 'emit pc! p! p@ !p u>  > < = 0<  <> within +!
 \ m+ abs  allot ." ," s" type accept umax umin spaces space
-\ 2swap 2dup 2drop 2! 2@ cf, chars  cells cell+  align
+\ 2swap 2dup 2drop 2! 2@ cf,  align
 \ c, , here dp  2constant constant 2variable variable
 \ @ex key? key emit Fcy mtst scan skip n=  lshift   ic,
 \ i, operator iflush pause turnkey to is defer value fl+ fl- c! c@ @
@@ -1934,22 +2082,8 @@ end-code
 \
 \
 \
-\ ALIGN    --                         align DP
-\         fdw     CELL_L
-\ ALIGN_L:
-\         .db     NFA|5,"align"
-\ ALIGN:
-\         rcall   HERE
-\         rcall   ALIGNED
-\         rcall   DP
-\         jmp     STORE
 \
 \
-\ CHARS    n1 -- n2            chars->adrs units
-\         fdw     CHARPLUS_L
-\ CHARS_L:
-\         .db     NFA|INLINE|5,"chars"
-\ CHARS:  ret
 \
 \         fdw     CHARS_L
 \ COMMAXT_L:
@@ -2000,19 +2134,7 @@ end-code
 \         .dw     0xfffa         \  -6
 \         jmp     IALLOT
 \
-\
-\ 2@    a-addr -- x1 x2            fetch 2 cells
-\   DUP @ SWAP CELL+ @ \
-\   the lower address will appear on top of stack
-\         fdw     COMMAXT_L
-\ TWOFETCH_L:
-\         .db     NFA|2,"2@",0
-\ TWOFETCH:
-\         rcall   DUP  \ dup
-\         rcall   FETCH_A
-\         rcall   SWOP
-\         rcall   CELLPLUS  \ cell+
-\         jmp     FETCH_A
+
 \
 \ 2!    x1 x2 a-addr --            store 2 cells
 \   SWAP OVER ! CELL+ ! \
@@ -2058,16 +2180,6 @@ end-code
 \
 \ INPUT/OUTPUT ==================================
 
-\ output a space
-\ : space  ( --)
-\    bl emit ;
-\         fdw     TWOSWAP_L
-\ SPACE_L:
-\         .db     NFA|5,"space"
-\ SPACE_:
-\         rcall   BL
-\         jmp     EMIT
-\
 \ SPACES   n --                  output n spaces
 \   BEGIN DUP WHILE SPACE 1- REPEAT DROP \
 \         fdw     SPACE_L
@@ -2296,10 +2408,6 @@ end-code
 
 
 
-\ FROM_LITBUF:
-\         lds     r0, litbuf0
-\         lds     r1, litbuf1
-\         ret
 
 
 \ PLUSC_:
@@ -2397,23 +2505,6 @@ end-code
 \         fdw     WITHIN_L
 
 
-\ NOTEQUAL_L:
-\         .db     NFA|2,"<>",0
-\ NOTEQUAL:
-\         rcall   EQUAL
-\         jmp     ZEROEQUAL
-\
-\         fdw     ZEROLESS_L
-
-
-\ EQUAL_L:
-\         .db     NFA|1, "="
-\ EQUAL:
-\         rcall   MINUS
-\         jmp     ZEROEQUAL
-\
-\
-\         fdw     EQUAL_L
 
 
 \ LESS_L:
@@ -2439,26 +2530,6 @@ end-code
 \
 \         fdw     GREATER_L
 
-
-\ ULESS_L:
-\         .db     NFA|2,"u<",0
-\ ULESS:
-\         rcall   MINUS       \ Carry is valid after MINUS
-\         sbc     tosl, tosl
-\         sbc     tosh, tosh
-\         ret
-\
-\         fdw     ULESS_L
-
-
-\ UGREATER_L:
-\         .db     NFA|2, "u>",0
-\ UGREATER:
-\         rcall   SWOP
-\         jmp     ULESS
-\
-\         fdw     UGREATER_L
-\ STORE_P_L:
 
 
 \
@@ -2486,22 +2557,6 @@ end-code
 \         movw    tosl, pl
 \         jmp     CSTORE
 \
-\         fdw     PCSTORE_L
-\ PPLUS_L:
-\         .db     NFA|INLINE|2,"p+",0
-\ PPLUS:
-\         add     pl, r_one
-\         adc     ph, r_zero
-\         ret
-\
-\         fdw     PPLUS_L
-\ PNPLUS_L:
-\         .db     NFA|3,"p++"
-\ PNPLUS:
-\         add     pl, tosl
-\         adc     ph, tosh
-\         poptos
-\         ret
 \
 \         fdw     PNPLUS_L
 \ UEMIT_L:
@@ -3696,14 +3751,6 @@ end-code
 \         pushtos
 \         ret
 \
-\         fdw     NOTEQUAL_L
-\ ZEROEQUAL_L:
-\         .db     NFA|2, "0=",0
-\ ZEROEQUAL:
-\         sbiw    tosl, 1
-\         sbc     tosl, tosl
-\         sbc     tosh, tosh
-\         ret
 \
 \         fdw     ZEROEQUAL_L
 \ ZEROLESS_L:
@@ -4911,17 +4958,6 @@ end-code
 \         brmi    RX1_ISR_SKIP_XOFF
 \         sbi_    U1RTS_PORT, U1RTS_BIT
 \ .endif
-\ RX1_ISR_SKIP_XOFF:
-\         ldi     zl, low(rbuf1)
-\         ldi     zh, high(rbuf1)
-\         lds     xl, rbuf1_wr
-\         add     zl, xl
-\         adc     zh, r_zero
-\         st      z, xh
-\         inc     xl
-\         andi    xl, (RX1_BUF_SIZE-1)
-\         sts     rbuf1_wr, xl
-\         rjmp    FF_ISR_EXIT
 \ TX1_ISR:
 \ .endif
 \ **************************************************
@@ -5283,47 +5319,7 @@ end-code
 \             rcall FF_ISR
 \ .endif
 \
-\ .org BOOT_START + INT_VECTORS_SIZE - 1
-\ FF_ISR_EXIT:
-\         pop     tosh
-\         pop     tosl
-\         pop     t1
-\         pop     t0
-\         pop     zh
-\         pop     zl
-\ MS_TIMER_ISR_EXIT_LOAD:
-\         ld      xl, y+
-\         ld      xh, y+
-\ MS_TIMER_ISR_EXIT:
-\         out_    SREG, xh
-\         ld      xh, y+
-\         reti
 \
-\ FF_ISR:
-\ .if IDLE_MODE == 1
-\ .if CPU_LOAD == 1
-\         out_    TCCR1B, r_one   \ Start load counter
-\ .endif
-\ .endif
-\         st      -y, xh
-\         in_     xh, SREG
-\         st      -y, xh
-\         st      -y, xl
-\         m_pop_xh
-\         pop     xh
-\         pop     xl
-\         push    zl
-\         push    zh
-\         push    t0
-\         push    t1
-\         push    tosl
-\         push    tosh
-\         ldi     t0, low(ivec-1)
-\         add     xl, t0
-\         ldi     xh, high(ivec)
-\         ld      zl, x+
-\         ld      zh, x+
-\         mijmp   \(z)
 \
 \ \ \ *************************************************
 \ MS_TIMER_ISR:
@@ -5738,35 +5734,8 @@ end-code
 \ .endif
 \ WARM_L:
 \         .db     NFA|4,"warm",0
-\ WARM_:
-\ Zero memory
-\         cli           \ Disable interrupts
-\         clr     xl
-\         clr     xh
-\         ldi     yl, 25
-\         ldi     yh, 0
-\ WARM_1:
-\         st      x+, yh
-\         subi    yl, 1
-\         brne    WARM_1
-\
-\         in_     t3, SREG
-\ .ifdef MCUCSR
-\         in_     t2, MCUCSR
-\         sts     MCUCSR, r_zero
-\ .endif
-\ .ifdef MCUSR
-\         in_     t2, MCUSR
-\         sts     MCUSR, r_zero
-\ .endif
-\         ldi     xh, high(SRAM_START)
-\
-\ .ifdef USBCON
-\   	    sbi_	USBCON, OTGPADE			\ Enable USB power pads
-\         ldi   xl, low(SRAM_START + 0x10)
-\ .else
-\         ldi   xl, low(SRAM_START)
-\ .endif
+
+
 
 
 
@@ -5984,7 +5953,7 @@ label WARM_3
     \         call    EXECUTE
     \ STARTQ2:
     \         jmp     ABORT
-    \      
+    \
 \ .equ partlen = strlen(partstring)
 \ .equ datelen = strlen(DATE)
 \
@@ -6552,10 +6521,6 @@ label WARM_3
 
 
 \ *** End of File ***********************
-s" core.txt" cr type
 
 \ end-meta
 
-\ dump TARGET content
-ADR-T @
-here-t  dump
