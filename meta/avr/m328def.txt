@@ -1,18 +1,20 @@
 \ adapted from m328def.inc
 
+cr ."   avr/        m328def.txt"
 
-Xassembler definitions
+defined Xassembler [if]
+    Xassembler definitions
+[endif]
 
 \ ***** SPECIFY DEVICE ***************************************************
-: device
-    s" ATmega328"
-    ;
+string device
+s" ATmega328" device $!
+
 
 \ #pragma AVRPART ADMIN PART_NAME ATmega328
 $1e     .equ SIGNATURE_000
 $95	.equ SIGNATURE_001
 $14	.equ SIGNATURE_002
-
 
 
 
@@ -25,7 +27,7 @@ $c4     .equ	UBRR0L		\ MEMORY MAPPED
 $c5     .equ	UBRR0H		\ MEMORY MAPPED
 $c2     .equ	UCSR0C		\ MEMORY MAPPED
 $c1     .equ	UCSR0B		\ MEMORY MAPPED
-$c0     .equ	UCSR0A		\ MEMORY MAPPED
+$c0     .equ    UCSR0A		\ MEMORY MAPPED
 $bd     .equ	TWAMR		\ MEMORY MAPPED
 $bc     .equ	TWCR		\ MEMORY MAPPED
 $bb     .equ	TWDR		\ MEMORY MAPPED
@@ -83,7 +85,7 @@ $2a     .equ	GPIOR1
 $28     .equ	OCR0B
 $27     .equ	OCR0A
 $26     .equ	TCNT0
-$25     .equ	TCCR0B
+$25     .equ    TCCR0B
 $24     .equ	TCCR0A
 $23     .equ	GTCCR
 $22     .equ	EEARH
@@ -126,7 +128,7 @@ $03     .equ	PINB
 1 .equ	U2X0		\ Double the USART transmission speed
 2 .equ	UPE0		\ Parity Error
 3 .equ	DOR0		\ Data overRun
-4 .equ	FE0		\ Framing Error
+4 .equ	FE_0		\ Framing Error
 5 .equ	UDRE0		\ USART Data Register Empty
 6 .equ	TXC0		\ USART Transmitt Complete
 7 .equ	RXC0		\ USART Receive Complete
@@ -684,14 +686,14 @@ TOIE2 .equ	TOIE2A		\ For compatibility
 
 \ ***** WATCHDOG *********************
 \ WDTCSR - Watchdog Timer Control Register
-\ .equ	WDP0	0	\ Watch Dog Timer Prescaler bit 0
-\ .equ	WDP1	1	\ Watch Dog Timer Prescaler bit 1
-\ .equ	WDP2	2	\ Watch Dog Timer Prescaler bit 2
-\ .equ	WDE	3	\ Watch Dog Enable
-\ .equ	WDCE	4	\ Watchdog Change Enable
-\ .equ	WDP3	5	\ Watchdog Timer Prescaler Bit 3
-\ .equ	WDIE	6	\ Watchdog Timeout Interrupt Enable
-\ .equ	WDIF	7	\ Watchdog Timeout Interrupt Flag
+0 .equ	WDP0		\ Watch Dog Timer Prescaler bit 0
+1 .equ	WDP1		\ Watch Dog Timer Prescaler bit 1
+2 .equ	WDP2		\ Watch Dog Timer Prescaler bit 2
+3 .equ	WDE		\ Watch Dog Enable
+4 .equ	WDCE		\ Watchdog Change Enable
+5 .equ	WDP3		\ Watchdog Timer Prescaler Bit 3
+6 .equ	WDIE		\ Watchdog Timeout Interrupt Enable
+7 .equ	WDIF		\ Watchdog Timeout Interrupt Flag
 
 
 \ ***** EEPROM ***********************
@@ -923,6 +925,4 @@ $0032   .equ	SPMRaddr	\ Store Program Memory Read
 
 52      .equ	INT_VECTORS_SIZE    \ size in words
 
-
 \ *** End of File ***********************
-s" m328def.txt loaded" cr type
