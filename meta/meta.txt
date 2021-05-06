@@ -2,7 +2,7 @@
 \ Meta compiler for generating Xcross compiled code                   *
 \    Filename:      meta.txt                                          *
 \    Date:          26.03.2021                                        *
-\    Updated:       04.05.2021                                        *
+\    Updated:       06.05.2021                                        *
 \    MCU:           gForth                                            *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
@@ -77,6 +77,30 @@ meta definitions
 switch
 
 
+\ *** new code to replace SWITCH ***************
+
+\ keeps and restores a context
+variable context-backup
+variable current-backup
+
+\ save CONTEXT and CURRENT in backups
+: contextCurrentSave ( -- )
+    context @   context-backup !
+    current @   current-backup !
+    ;
+
+\ restore CONTEXT and CURRENT in backups
+: contextCurrentRestore ( -- )
+    context-backup @  context !
+    current-backup @  current !
+    ;
+
+\ **********************************************
+
+
+
+
+
 
 only forth also meta also
 root definitions
@@ -103,15 +127,15 @@ root definitions
 only forth also meta also
 meta definitions
 \ the following words are defined in the META vocabulary
-: in-target  ( -- )                 \ strength definition of words in target
-    only target definitions         \ search order limited to ROOT and target
+: in-target  ( -- )                 \ strength definition of words in TARGET
+    only target definitions         \ search order limited to ROOT and TARGET
     ;
 
 
 \ force definition of words in target
 : in-transition  ( -- )
     only forward also               \ search order:
-    target definitions              \ TRANSITION TARGET FORWARDS
+    target definitions              \ TRANSITION TARGET FORWARD
     also  transition
     ;
 
@@ -124,12 +148,12 @@ meta definitions
 \ word definition strength in Xassembler
 : in-Xassembler  ( -- )
     only forth also                 \ search order:
-    Xassembler definitions also     \ META FORTH
+    Xassembler definitions also     \ XASSEMBLER FORTH
     ;
 
 \ word definition strength in FORWARDS
 : in-forward  ( -- )
-    forward definitions             \ order of words starting with FORWARDS
+    forward definitions             \ order of words starting with FORWARD
     ;
 
 
@@ -320,25 +344,27 @@ string TARGET$                      \ initialization in meta_XXXXXX.XXX
   then
     ;
 
-: resolved?  ( pfa -- f )
+\ test if word in FORWARD is resolved
+: resolved?  ( cfa -- f )
     \   2 + @       \ @TODO: to debug....
-    cell + @
+    >body @
     ;
 
-: forward-code  ( pfa -- )
+
+: forward-code  ( cfa -- )
     dup resolved?   \ @TODO: to debug....
-    if
-        make-code
-    else
-        link-backwards
+    if      make-code
+    else    link-backwards
     then
     ;
 
 \ create a FORWARD reference
 : forward:  ( -- )
-    switch forward definitions
+    contextCurrentSave
+    in-forward
     create
-        switch 0 , 0 ,      \ @TODO: to debug....
+        contextCurrentSave
+        0 , 0 ,      \ @TODO: to debug....
     does>
         forward-code
     ;
@@ -457,7 +483,7 @@ defer ?valid  ( -- )
 \ Directive for mandatory compilation
 : forced  ( -- )
     ?backstep CHECKING @ FORCE !
-    CHECKING OFF VALID ON
+    CHECKING off VALID ON
     ;
 
 \ Compulsory end of compilation
@@ -580,14 +606,33 @@ meta in-meta
 
 meta in-meta
 
+\ Compilation des mots de transition
+
+\ original code
+\ : T:  (S -- )
+\   SWITCH TRANSITION DEFINITIONS
+\   CREATE
+\     SWITCH ]
+\   DOES>
+\     >R
+\ ;
+
 \ Compiling Transition Words
-: T:  ( -- )
-    switch
+\ : T:  ( -- )
+\     contextCurrentSave
+\     transition definitions
+\     create
+\         contextCurrentRestore ]
+\     does>
+\         >r
+\     ;
+
+\ Compiling Transition Words
+: T:  ( -- <name> )
+    contextCurrentSave
     transition definitions
-    create
-        switch ]
-    does>
-        >r
+    :
+    contextCurrentRestore
     ;
 
 \ original code
@@ -596,16 +641,14 @@ meta in-meta
 \   [COMPILE] ; SWITCH
 \ ; IMMEDIATE
 
+
 : T;  ( -- )
 \ break" T; : " cr
-    switch
-    transition definitions
-    postpone ;
-    switch
+    contextCurrentSave
+    [forth]
+    [compile] ;           
+    contextCurrentRestore
     ; immediate
-
-\ t: (
-\     [compile] ( t;
 
 
 \ : DIGIT?  ( CHAR -- F )
@@ -633,41 +676,41 @@ meta in-meta
 \ ;
 
 \ Transition words
-\ T: (
-\     [compile] (
-\     T;
+T: (
+    [compile] (
+     T;
 
 
 
-\ T: \
-\     [compile] \
-\     T;
+T: \
+    [compile] \
+    T;
 
-\ T: ?\
-\    [compile] ?\
-\ T;
+T: ?\
+    postpone ?\
+    T;
 
-\ T: FRENCH
-\    [compile] FRENCH
-\ T;
+T: FRENCH
+    [compile] FRENCH
+    T;
 
-\ T: ENGLISH
-\    [compile] ENGLISH
-\ T;
+T: ENGLISH
+    [compile] ENGLISH
+    T;
 
-\ T: GERMAN
-\    [compile] GERMAN
-\ T;
+T: GERMAN
+    [compile] GERMAN
+    T;
 
 
-\ : ]]
-\     ]
-\     ;
+: ]]
+    ]
+    ;
 
-\ : [[
-\ \     [compile] [
-\     postpone [
-\     ; forth immediate meta
+: [[
+\     [compile] [
+    postpone [
+    ; forth immediate meta
 
 
 
@@ -810,7 +853,7 @@ meta in-meta
 
 \ T: ;USES  ( -- )
 \    [forward] (;USES) IN-meta Xassembler
-\    !csp STATE-T OFF
+\    !csp STATE-T off
 \ T;
 
 \ T: [compile]
@@ -892,7 +935,7 @@ meta in-meta
 \                 then
 \             then
 \         then
-\         STATE-T @ 0= END? @ OR END? OFF
+\         STATE-T @ 0= END? @ OR END? off
 \     UNTIL
 \     ;
 
@@ -907,16 +950,16 @@ meta in-meta
 \ [FORTH] ' NEWSTATE IS RUN meta
 
 \ T: [  ( -- )
-\    in-meta STATE-T OFF
+\    in-meta STATE-T off
 \ T;
 
-\ forward: UNNEST
+forward: UNNEST
 
 \ T: ;  ( -- )
 \    [forward] UNNEST [[  transition ]] [
 \ T;
 
-\ forward: NEST
+forward: NEST
 
 \ \ Structures de contrôle de META
 \ : ?>MARK  ( -- f addr )
@@ -1102,7 +1145,7 @@ in-meta
     cr  FRENCH  ?\ ." Dernière adresse cible:   "
         ENGLISH ?\ ." Latest target adress:     "
         GERMAN  ?\ ." Letzte TARGET Adresse:    "
-        here-t u. 
+        here-t u.
     cr cr
     ;
 
@@ -1119,42 +1162,44 @@ in-meta
 \   ADR-T @ 0 here-t TARGET$ $EXECUTE
 \ ;
 
-\ : end-meta  ( -- )
-\     statistics SAVING @
-\     if
-\         \ tsave
-\     then
-\     [forth] only forth also definitions decimal
-\     ;
+\ end of meta-compilation
+: end-meta  ( -- )
+    statistics SAVING @
+    if
+        \ tsave
+    then
+    [forth] only forth also definitions decimal
+    ;
+
 
 \ Final words of interpretation for META
-\ : H:
-\     [compile] :
-\     ;
+: H:
+    [compile] :
+    ;
 
-\ : H;
-\     [compile] ;
-\     ; immediate
+: H;
+    [compile] ;
+    ; immediate
 
 \ H: '
 \    tickT >body @
 \ H;
 
-\ H: ,
-\    ,-t
-\ H;
+H: ,
+    ,-t
+    H;
 
-\ H: C,
-\    c,-t
-\ H;
+H: c,
+    c,-t
+    H;
 
-\ H: HERE
-\    here-t
-\ H;
+H: here
+    here-t
+    H;
 
-\ H: ALLOT
-\    allot-t
-\ H;
+H: allot
+    allot-t
+    H;
 
 \ H: definitions
 \    definitions CONTEXT-T @ CURRENT-T !
@@ -1168,13 +1213,28 @@ in-meta
 \    then
 \ H;
 
-\ H: :  ( -- )
-\    target-create [forward] NEST ]
-\ H;
+
+include compile-header-resolve.txt
+
+
+
+
+\ create head word in target
+ \ force compilation of word in FORWARD vocabulary
+
+: (in:)
+\ break:
+    target-create               
+    [forward] NEST ]
+    ;
+
+H: :  ( -- )
+    (in:)
+    H;
 
 
 forth
-only 
+only
 forth also
 forth definitions
 
