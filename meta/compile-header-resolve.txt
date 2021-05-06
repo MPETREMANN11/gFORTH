@@ -1,0 +1,3 @@
+cr ."   compile-header-resolve.txt "
+
+include avr/FFmetaHeader.txt
