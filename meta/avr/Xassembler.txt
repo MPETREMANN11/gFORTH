@@ -6,19 +6,39 @@
 \    Copyright:     Mikael Nordman                                    *
 \    Author:        Mikael Nordman                                    *
 \ adapted for gForth by Marc PETREMANN 26.03.2021                     *
-\    Updated:       02.05.2021                                        *
+\    Updated:       06.05.2021                                        *
 \ *********************************************************************
 \  FlashForth is licensed acording to the GNU General Public License  *
 \ *********************************************************************
 \ FlashForth Cross assembler for Atmega chips
+
+cr ."   avr/   Xassembler.txt"
 
 \ define Xassembler vocabulary
 [ifundef] Xassembler
     vocabulary Xassembler
 [then]
 
-also Xassembler
+only forth also
+ Xassembler also
 Xassembler definitions
+
+defer (DP-T)
+defer (here-t)
+
+[ifundef] meta
+    variable DP-T    \ Dictionnay Pointer in Target (virtual)
+    : here-t  ( -- taddr )
+        DP-T @
+        ;
+    \ resolve defered words
+         ' DP-T                 is (DP-T)
+         ' here-t               is (here-t)
+[else]
+    \ resolve defered words
+    meta ' DP-T     Xassembler  is (DP-T)
+    meta ' here-t   Xassembler  is (here-t)
+[endif]
 
 
 
@@ -47,6 +67,8 @@ forth ' ,  Xassembler is ,
 \     ;
 
 \ Combine the opcode with the operand fields
+\ CAUTION: dest1 must be a relative value between [FFF,0] = k
+\ The relative address k is from -2048 to 2047
 : mask! ( dest1 opcode mask -- instruction )
     rot over Winvert and rot rot and or ; \ dest1&!mask src&mask or
 
@@ -243,9 +265,17 @@ $fe00 $fe08  Rd,Rr: sbrs, \ Rd b --
 
 $940c $fe0e   k22: jmp,   ( k16 k6 -- ) \ k6=0 for 16b addr
 $940e $fe0e   k22: call,  ( k16 k6 -- ) \ k6=0 for 16b addr
-: rjmp,
-$c000 $f000  mask! , ; ( k12 -- )
-: rcall,  $d000 $f000  mask! , ; ( k12 -- )
+
+[ifdef] meta
+    \ Relative addr, for jump back, <radr rjmp
+    : <radr     ( adr -- k )
+        (here-t) 1+ - ;
+[endif]
+
+: rjmp,  ( k12 -- )
+    $c000 $f000  mask! , ; 
+: rcall, ( k12 -- )
+    $d000 $f000  mask! , ; 
 
 
 $f008 constant cs,   \ if/until carry set
@@ -264,7 +294,7 @@ $f00f constant ie,   \ if/until interrupt enabled
 [ifdef] meta
     : if, ( cc -- addr)
 \         break" if, : "
-        , here-t
+        , (here-t)
         ;
     : else, 
         
@@ -274,7 +304,7 @@ $f00f constant ie,   \ if/until interrupt enabled
         ;
     : begin, 
 \         break" begin, : "
-        here-t 
+        (here-t) 
         ;
     : again, ( addr -- )
 \         break" again, : "
@@ -283,7 +313,7 @@ $f00f constant ie,   \ if/until interrupt enabled
     : until, ( addr cc -- )
 \         break" until, : "
         , 
-        here-t - 2/ rjmp, 
+        (here-t) - 2/ rjmp, 
         ;
 [endif]
 
@@ -446,8 +476,25 @@ $03  constant ZH:ZL
     and
     ;
 
+\ bitwise NOT
+: ~ ( n --)
+    Winvert
+    ;
 
+\ Equal
+: == ( n1 n2 -- fl )
+    =
+    ;
 
+\ Not equal
+: != ( n1 n2 -- fl )
+    <>
+    ;
+
+\ push 2 to power x
+: exp2 ( x -- 2^x )
+    1- 2 swap <<
+    ;
 
 
 \ *** END directives definitions ****
@@ -459,12 +506,18 @@ $03  constant ZH:ZL
 : .HH ( c --)
     base @ >r
     s>d <# # # #> type space
-    r> base ! ;
+    r> base ! 
+    1 (DP-T)  +!
+    ;
 
 : .HHHH ( n --)
     base @ >r
     s>d <# # # # # #> type space
-    r> base ! ;
+    r> base !
+    2 (DP-T)  +!
+    ;
+
+
 
 ' .HH   is c,
 ' .HHHH is ,
@@ -476,4 +529,3 @@ $03  constant ZH:ZL
 
 
 \ *** End of File ***********************
-s" Xassembler.txt loaded" cr type
