@@ -2,11 +2,13 @@
 \ MACROS adapted from macros.inc                                      *
 \    Filename:      macros.txt                                        *
 \    Date:          26.03.2021                                        *
-\    Updated:       30.04.2021                                        *
+\    Updated:       07.05.2021                                        *
 \    MCU:           gForth                                            *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
 \ *********************************************************************
+
+cr ."   avr/    macros.txt"
 
 Xassembler definitions
 
@@ -28,8 +30,8 @@ R10     .def ibasel         \ Not in interrupt
 R11     .def ibaseh         \ Not in interrupt
 R14     .def ms_count       \ Not in interrupt
 R15     .def ms_count1      \ Not in interrupt
-r16     .def t0
-r17     .def t1
+R16     .def t0
+R17     .def t1
 \   .def t2 = r0          \ Not in interrupt
 \   .def t3 = r1          \ Not in interrupt
 
@@ -38,8 +40,8 @@ R19     .def ah
 R20     .def pl             \ P Register and FOR..LOOP INDEX variable
 R21     .def ph
 
-\   .def FLAGS1 = r22     \ Not in interrupt
-\   .def FLAGS2 = r23     \ Not in interrupt
+R22     .def FLAGS1         \ Not in interrupt
+R23     .def FLAGS2         \ Not in interrupt
 R24     .def tosl
 R25     .def tosh
 \ xl = r26
@@ -53,15 +55,17 @@ R27     .def t5
 R30     .def t6
 R31     .def t7
 
-\ Macros
-.macro poptos
+.macro poptos   \  ::  tested OK 07may2021
     tosl Y+ ld,
     tosh Y+ ld,
 .endmacro
 
-.macro pushtos
-    -Y tosh st,
-    -Y tosl st,
+.macro pushtos  \  ::  tested OK 07may2021
+\     -Y tosh st,   \ BAD !!!
+\     -Y tosl st,
+    tosh -Y  st,    \ GOOD !!
+    tosl -Y  st,
+
 .endmacro
 
 
@@ -84,33 +88,37 @@ R31     .def t7
     endif
 .endmacro
 
-\ .macro sbi_  { @0 @1 -- }
-\ .if (@0 < $40)
-\   sbi @0,@1
-\ .else
-\   in_ r16,@0
-\   ori r16,exp2(@1)
-\   out_ @0,r16
-\ .endif
-\ .endmacro
 
-\ .macro cbi_  { @0 @1 -- }
-\ .if (@0 < $40)
-\   cbi @0,@1
-\ .else
-\   in_ r16,@0
-\   andi r16,~(exp2(@1))
-\   out_ @0,r16
-\ .endif
-\ .endmacro
+.macro sbi_  { @0 @1 -- }
+    @0 $40 <  if
+        @0 @1 sbi, 
+    else
+        r16 @0 in_ 
+        r16 @1 exp2  ori,       \ ori r16,exp2(@1)
+        @0 r16 out_ 
+    endif
+.endmacro
 
-\ .macro lpm_ 
-\ .if (FLASHEND < 0x8000) \ Word address
-\         lpm @0,@1
-\ .else
-\         elpm @0,@1
-\ .endif
-\ .endmacro
+
+.macro cbi_  { @0 @1 -- }
+    @0 $40 <  if 
+        @0 @1 cbi, 
+    else
+        r16 @0 in_ 
+        r16 @1 exp2 ~ andi,     \ andi r16,~(exp2(@1))
+        @0 r16 out_ 
+    endif
+.endmacro
+
+
+.macro lpm_  { @0 @1 -- }
+    FLASHEND $8000 <        \ Word address
+    if  
+         @0 @1 lpm,
+    else
+         @0 @1 elpm,
+    endif
+.endmacro
 
 
 .macro sub_pflash_z
@@ -191,4 +199,4 @@ R31     .def t7
 
 
 \ *** End of File ***********************
-s" macros.txt loaded" cr type
+
