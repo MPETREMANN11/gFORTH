@@ -1,4 +1,12 @@
-\ adapted from m328def.inc
+\ *********************************************************************
+\ adapted from m328def.inc                                            *
+\    Filename:      m328def.txt                                        *
+\    Date:          26.03.2021                                        *
+\    Updated:       07.05.2021                                        *
+\    MCU:           gForth                                            *
+\    Copyright:     Marc PETREMANN                                    *
+\    Author:        Marc PETREMANN                                    *
+\ *********************************************************************
 
 cr ."   avr/        m328def.txt"
 
