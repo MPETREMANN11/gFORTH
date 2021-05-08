@@ -29,17 +29,16 @@
 <p>For the moment, the project favors the processor of ARDUINO cards.</p>
 <p>Here is the sequence diagram of the files allowing the generation of code for ARDUINO: </p>
 <pre>
-meta_AVR328.txt
-  +-------------- forthExtend.txt
-                  meta.txt
-                    +----------------- compile-header-resolve.txt
-                                         +-------------------- avr/  FFmetaHeader.txt
-                  avr/  Xassembler.txt
-                  avr/  config.txt
-                    +----------------- avr/  m328def.txt
-                  avr/  macros.txt
-                  avr/  core.txt
-                  kernelCode.txt
+----- forthExtend.txt
+      meta.txt
+      avr/   Xassembler.txt
+      compile-header-resolve.txt 
+        +----- avr/ FFmetaHeader.txt 
+      avr/    config.txt
+        +------ avr/        m328def.txt
+      avr/    macros.txt
+      avr/    core.txt
+      kernelCode.txt
 </pre>
 <h3>Project files</h3>
 <h4>meta_AVR328.txt</h4>
