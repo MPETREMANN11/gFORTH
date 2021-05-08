@@ -5,7 +5,7 @@
 \    MCU:           Atmega -- gForth                                  *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
-\    Updated:       28.04.2021                                        *
+\    Updated:       08.05.2021                                        *
 \ *********************************************************************
 \   FlashForth is licensed acording to the GNU General Public License *
 \ *********************************************************************
@@ -18,28 +18,31 @@
 \ cd HTMLEDIT/arduino-forth/www/articles/listings/gForth/meta
 \ sous gForth:
 \ include meta_AVR328.txt
-\
-\ use  dbg <word>   to debug a word
 
 
 \ order of files loading:
 \ ----- forthExtend.txt
-\       meta.txt
+\       meta.txt            
+\         +-------- compile-header-resolve.txt
+\                     +-------- avr/FFmetaHeader.txt
 \       avr/Xassembler.txt
-\       avr/config.txt      ------- m328def.txt
+\       avr/config.txt      
+\         +-------- m328def.txt
 \       avr/macros.txt
 \       avr/core.txt
+\       kernelCode.txt
 
 \ extend gForth
 include forthExtend.txt
 
 \ meta compiler
 include meta.txt
+
 meta s" AVR328.HEX"  TARGET$ $!          \ initialization target file name
-.options
+\ .options
 
 \ adapation of NFA, CFA, etc...
-include avr/FFmetaHeader.txt
+\ include avr/FFmetaHeader.txt
 
 
 \ Select the include file for your micro controller, used in config.txt
@@ -91,3 +94,8 @@ meta ' ,-t          Xassembler IS ,
 \ build FORTH core in assembler and words in FORTH language
 include avr/core.txt
 
+\ include kernelCode.txt
+
+\ dump TARGET content
+ADR-T @
+here-t  dump
