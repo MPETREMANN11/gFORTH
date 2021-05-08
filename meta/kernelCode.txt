@@ -5,15 +5,30 @@
 \    MCU:           All -- gForth metacompilation                     *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
-\    Updated:       05.04.2021                                        *
+\    Updated:       08.05.2021                                        *
 \ *********************************************************************
 
 cr ." kernelCode.txt"
 
+[ifundef] rot
+\ rotate 3 values on top of stack
+: rot ( n1 n2 n3 --- n3 n1 n2)
+    >r swap r> swap
+    ;
+[endif]
+
+
+[ifundef] +!
+: +!  ( n addr --)
+    swap over @
+    + swap !
+    ;
+[endif]
+
 
 \ output a space
 : space  ( --)
-    bl emit 
+    bl emit
     ;
 
 
@@ -23,29 +38,178 @@ cr ." kernelCode.txt"
     dp !
     ;
 
-
+\ fetch double integer from addr
 : 2@ ( addr -- d )
     dup @
     swap cell + @
     ;
 
-
+\ true if integers u1 > u2
 : u> ( u1 u2 -- fl )
     swap u<
     ;
 
+[ifundef] umax
+\ unsigned maximum
+: umax( u1 u2 -- u)
+    2dup u<
+    if swap then
+    drop ;
+[endif]
 
-
+\ true if integers n1 = n2
 : = ( n1 n2 -- fl )
     -  0=
     ;
 
-
+\ true if integers n1 not = n2
 : <> ( n1 n2 -- fl )
     =  0=
     ;
 
 
+: value ( comp: n -- <name> | exec: -- n )
+    create
+        ,                   \ store n in pfa
+    does>
+        @
+    ;
+
+\ CHAR   -- char           parse ASCII character
+\         .db     NFA|4,"char",0
+\ CHAR:
+\         rcall   BL
+\         rcall   PARSE
+\         rcall   DROP
+\         jmp     CFETCH
+
+\ parse ASCII character
+: char ( comp: -- )
+    bl parse
+    drop c@
+    ; immediate
+
+
+
+\ [CHAR]   --          compile character DOLITeral
+\         .db     NFA|IMMED|COMPILE|6,"[char]",0
+\ BRACCHAR:
+\         rcall   CHAR
+\         jmp     LITERAL
+
+\ compile character DOLITeral
+: [char] ( comp: -- <char> )
+    char literal
+    ; immediate compile-only
+
+
+\
+\ et current data space ptr
+: here ( -- addr )
+    dp @
+    ;
+
+
+[ifundef] cell+
+\ Increment addr to next cell ::  tested OK 07may2021
+: cell+ ( a-addr1 -- a-addr2 )
+    2 +
+    ;
+[endif]
+
+
+\ print stack contents
+: .s ( -- )
+    space
+    sp@ s0 @ 2-
+    begin
+        2dup <
+    while
+        -@ u.
+    repeat
+    2drop
+    ;
+
+
+
+\ drop 2 cells
+: 2drop ( d -- )
+    drop drop
+    ;
+
+
+\ dup top 2 cells
+: 2dup ( d -- d d )
+    over over
+    ;
+
+
+\ swap top 2 cells
+: 2swap ( d1 d2 -- d1 d2 )
+    rot >r
+    rot r>
+    ;
+
+
+\ unsigned maximum
+: umax( u1 u2 -- u )
+    2dup u<
+    if 
+        swap 
+    then 
+    drop 
+    ;
+
+
+\ unsigned minimum
+: umin ( u1 u2 -- u)
+    2dup u>
+    if 
+        swap 
+    then
+    drop 
+    ;
+
+
+\ type line to terminal u < $100
+: type ( c-addr u --) \
+    for 
+        c@+ emit 
+    next
+    drop 
+    ;
+
+
+: allot ( n --)
+    dp +!
+    ;
+
+
+\ append cell to current data space
+: , ( u -- )
+    here !
+    cell allot 
+    ;
+
+
+\ append char to current data space
+; c, ( c -- )
+    here c!
+    1 allot
+    ;
+
+
+[ifundef] +!
+: +!  ( n addr --)
+    swap over @
+    + swap !
+    ;
+[endif]
+
+
 
 
 \ *** End of File ***********************
+
+
+
