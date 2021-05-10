@@ -1,0 +1,217 @@
+\ *********************************************************************
+\    Filename:      Xassembler.txt                                    *
+\    Date:          03.05.2021                                        *
+\    MCU:           ESP32 -- gForth                                   *
+\    Copyright:     Marc PETREMANN                                    *
+\    Author:        Marc PETREMANN                                    *
+\    Updated:       10.05.2021                                        *
+\ *********************************************************************
+\ xxForth Cross assembler for ESP32 chips
+
+\ original documentation here: https://0x04.net/~mwk/doc/xtensa.pdf
+
+\ define Xassembler vocabulary
+[ifundef] Xassembler
+    vocabulary Xassembler
+[then]
+
+also Xassembler
+Xassembler definitions
+
+
+
+
+\ ----------- HERE PLACE FORTH ASSEMBLER CODE --------------
+
+\G definie value opCode
+: 24b:  ( comp: c -- <name> | exec: ar at -- @TODO: must defined )
+    create
+        ,
+    does>
+        @
+    ;
+
+
+%11111010 24b! ABS,         \ ABS
+
+\ ABS.S
+\ ADD
+\ ADD.N
+\ ADD.S
+\ ADDI
+\ ADDI.N
+\ ADDMI
+\ ADDX2
+\ ADDX4
+\ ADDX8
+\ ALL4
+\ ALL8
+\ AND
+\ ANDB
+\ ANDBC
+\ ANY4
+\ ANY8
+\ .......
+
+
+
+
+
+
+
+\ -----------------------------------------------------------
+
+
+
+
+
+
+
+
+
+\ defered version of , and c,
+defer ,
+defer c,
+
+forth ' ,  Xassembler is ,
+
+
+
+\ *** clone assembly directives ***********************************
+
+\ Defines a symbol and sets its value
+\ later changes of this value remain possible, syntax:
+\ 1234 .equ test
+: .equ  ( comp: n -- <name> | exec: -- n)
+    >in @ >r
+    bl word
+    count 2dup
+    find-name       \ leave nfa or 0
+    ?dup
+    if              \ word defined
+        r> drop
+        name>int    \ nfa > cfa
+        16 + >r     \ cfa > pfa  @TODO vérifier '16' !!!!!
+        2drop r> !  \ store value
+    else            \ word undefined
+        drop
+        r> >in !
+        drop value
+    then
+    ;
+
+\ Defines a synonym for a register, syntax:
+\ R16 .def MyReg
+: .def  ( comp: n -- <name> | exec: -- n)
+    value
+    ;
+
+\ Fixes the value of a symbole
+\ later redefinition is not possible, syntax:
+\ 123 .set ONE_TWO_THREE
+: .set ( comp: n -- <name> | exec: -- n)
+    constant
+    ;
+
+\ Reserves bytes for a variable
+: .byte ( comp: n -- <name> | exec: -- n)
+    constant
+    ;
+
+
+
+\ Define constant 1 bytes in program memory and EEPROM.
+: .db ( c --)
+    dup $ff >
+    if
+        abort" too big"
+        exit
+    then
+    c,
+    ;
+
+\ Define constant 2 bytes in program memory and EEPROM.
+: .dw ( n --)
+    dup $ffff >
+    if
+        abort" too big"
+        exit
+    then
+    ,
+    ;
+
+\ keep lowest 8 bits from n
+: LOW ( n -- c)
+    $100 /mod drop
+    ;
+
+\ keep highest 8 bits from n
+: HIGH ( n -- c)
+    $100 /mod swap drop
+    ;
+
+\ *** ASSEMBLER directives definitions *********
+
+: .macro ( exec: -- <name>)
+    :
+    ;
+
+: .endmacro ( --)
+    postpone ;
+    ; immediate
+
+
+\ *** clone ASSEMBLER operators ******************
+
+\ LSHIFT u1 value n shifts
+: << ( u1 n --)
+    lshift
+    ;
+
+\ RSHIFT u1 value n shifts
+: >> ( u1 n --)
+    rshift
+    ;
+
+\ logical OR
+: || ( fl1 fl2 --)
+    or
+    ;
+
+\ logical AND
+: && ( fl1 fl2 --)
+    and
+    ;
+
+
+
+
+
+\ *** END directives definitions ****
+
+\ *** for testing Xassembler ****************************
+: >lower ( c1 -- c2 )
+    dup 'A' 'Z' 1+ within bl and or ;
+
+: .HH ( c --)
+    base @ >r
+    s>d <# # # #> type space
+    r> base ! ;
+
+: .HHHH ( n --)
+    base @ >r
+    s>d <# # # # # #> type space
+    r> base ! ;
+
+' .HH   is c,
+' .HHHH is ,
+\ defered words will be updated in file meta_xxxxx.txt, example:
+\ meta ' c,-t         Xassembler IS c,
+\ meta ' ,-t          Xassembler IS ,
+
+\ *** @END of testing Xassembler ****************************
+
+
+\ *** End of File ***********************
+cr ." Xassembler.txt"
+
