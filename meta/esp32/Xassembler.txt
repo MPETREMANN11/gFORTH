@@ -6,7 +6,7 @@
 \    Author:        Marc PETREMANN                                    *
 \    Updated:       10.05.2021                                        *
 \ *********************************************************************
-\ xxForth Cross assembler for ESP32 chips
+\ Forth Cross assembler for ESP32 chips
 
 \ original documentation here: https://0x04.net/~mwk/doc/xtensa.pdf
 
@@ -24,29 +24,60 @@ Xassembler definitions
 \ ----------- HERE PLACE FORTH ASSEMBLER CODE --------------
 
 \G definie value opCode
-: 24b:  ( comp: c -- <name> | exec: ar at -- @TODO: must defined )
+: 24bArAt:  ( comp: c -- <name> | exec: ar at -- @TODO: must defined )
     create
         ,
     does>
         @
     ;
 
+\G definie value opCode
+: 24bArAsAt:  ( comp: c -- <name> | exec: ar as at -- @TODO: must defined )
+    create
+        ,
+    does>
+        @
+    ;
 
-%11111010 24b! ABS,         \ ABS
+\G definie value opCode Narrow XXX
+: N24bArAsAt:  ( comp: c -- <name> | exec: ar as at -- @TODO: must defined )
+    create
+        ,
+    does>
+        @
+    ;
+
+\G definie value opCode Narrow XXX
+\ : N24btBs:  ( comp: c -- <name> | exec: bt bs -- @TODO: must defined )
+\     create
+\         ,
+\     does>
+\         @
+\     ;
+
+
+
+%11111010 24bArAt           ABS,        \ Absolute Value
 
 \ ABS.S
-\ ADD
-\ ADD.N
+
+%10000000   24bArAsAt:      ADD,        \ Add
+%1010       N24bArAsAt:     ADD.N,      \ Narrow Add
+
 \ ADD.S
 \ ADDI
 \ ADDI.N
 \ ADDMI
-\ ADDX2
-\ ADDX4
-\ ADDX8
-\ ALL4
-\ ALL8
-\ AND
+
+%10010000   24bArAsAt:      ADDX2,      \ Add with Shift by 1
+%10100000   24bArAsAt:      ADDX4,      \ Add with Shift by 2
+%10110000   24bArAsAt:      ADDX8,      \ Add with Shift by 3
+
+\ N24btBs: ALL4  \ All 4 Booleans True
+\ N24btBs: ALL8  \ All 8 Booleans True
+
+%00010000   24bArAsAt:      AND,        \ Bitwise Logical And
+
 \ ANDB
 \ ANDBC
 \ ANY4
