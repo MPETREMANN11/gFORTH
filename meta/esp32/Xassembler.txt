@@ -4,7 +4,7 @@
 \    MCU:           ESP32 -- gForth                                   *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
-\    Updated:       10.05.2021                                        *
+\    Updated:       11.05.2021                                        *
 \ *********************************************************************
 \ Forth Cross assembler for ESP32 chips
 
@@ -19,16 +19,44 @@ also Xassembler
 Xassembler definitions
 
 
-
-
 \ ----------- HERE PLACE FORTH ASSEMBLER CODE --------------
 
+\G Address Registers (AR) general registers
+: ARreg: ( c -- )
+    constant 
+    ;
+
+00 ARreg: a0    \ holds the call return address
+01 ARreg: a1    \ stack pointer
+02 ARreg: a2
+03 ARreg: a3
+04 ARreg: a4
+05 ARreg: a5
+06 ARreg: a6
+07 ARreg: a7
+08 ARreg: a8
+09 ARreg: a9
+10 ARreg: a10
+11 ARreg: a11
+12 ARreg: a12
+13 ARreg: a13
+14 ARreg: a14
+15 ARreg: a15
+
+
+: _does24bArAt { opCode ar at -- }  \ CAUTION: locals variables @TODO: must defined
+    ;
+
 \G definie value opCode
-: 24bArAt:  ( comp: c -- <name> | exec: ar at -- @TODO: must defined )
+: 24bArAt:  ( comp: c -- <name> | exec: ar at -- )
     create
         ,
     does>
-        @
+        @ _does24bArAt
+    ;
+
+
+: _does24bArAsAt { opCode ar as at -- }  \ CAUTION: locals variables @TODO: must defined
     ;
 
 \G definie value opCode
@@ -36,7 +64,11 @@ Xassembler definitions
     create
         ,
     does>
-        @
+        @ _does24bArAsAt
+    ;
+
+
+: _doesN24bArAsAt { opCode ar as at -- }  \ CAUTION: locals variables @TODO: must defined
     ;
 
 \G definie value opCode Narrow XXX
@@ -44,10 +76,10 @@ Xassembler definitions
     create
         ,
     does>
-        @
+        @ _doesN24bArAsAt
     ;
 
-\G definie value opCode Narrow XXX
+\G define value opCode Narrow XXX
 \ : N24btBs:  ( comp: c -- <name> | exec: bt bs -- @TODO: must defined )
 \     create
 \         ,
