@@ -6,13 +6,13 @@
 \    Copyright:     Mikael Nordman                                    *
 \    Author:        Mikael Nordman                                    *
 \ adapted for gForth by Marc PETREMANN 26.03.2021                     *
-\    Updated:       06.05.2021                                        *
+\    Updated:       11.05.2021                                        *
 \ *********************************************************************
 \  FlashForth is licensed acording to the GNU General Public License  *
 \ *********************************************************************
 \ FlashForth Cross assembler for Atmega chips
 
-cr ."   avr/   Xassembler.txt"
+cr ."       avr/   Xassembler.txt"
 
 \ define Xassembler vocabulary
 [ifundef] Xassembler
@@ -267,10 +267,16 @@ $940c $fe0e   k22: jmp,   ( k16 k6 -- ) \ k6=0 for 16b addr
 $940e $fe0e   k22: call,  ( k16 k6 -- ) \ k6=0 for 16b addr
 
 [ifdef] meta
-    \ Relative addr, for jump back, <radr rjmp
-    : <radr     ( adr -- k )
-        (here-t) 1+ - ;
+    \G Relative addr, for jump back, <radr rjmp
+    : <radr     ( adr-t -- k )
+        (here-t) - 2 / 1 - 
+    dup $f000 and 0= invert
+    if
+        u. abort"  Too big! "
+    then
+    ;
 [endif]
+
 
 : rjmp,  ( k12 -- )
     $c000 $f000  mask! , ; 
@@ -497,9 +503,14 @@ $03  constant ZH:ZL
     ;
 
 
-\ *** END directives definitions ****
+\ *** complete META definitions ****
+
+
+
 
 \ *** for testing Xassembler ****************************
+Xassembler
+
 : >lower ( c1 -- c2 )
     dup 'A' 'Z' 1+ within bl and or ;
 
