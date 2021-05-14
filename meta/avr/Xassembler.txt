@@ -6,7 +6,7 @@
 \    Copyright:     Mikael Nordman                                    *
 \    Author:        Mikael Nordman                                    *
 \ adapted for gForth by Marc PETREMANN 26.03.2021                     *
-\    Updated:       11.05.2021                                        *
+\    Updated:       14.05.2021                                        *
 \ *********************************************************************
 \  FlashForth is licensed acording to the GNU General Public License  *
 \ *********************************************************************
@@ -266,14 +266,13 @@ $fe00 $fe08  Rd,Rr: sbrs, \ Rd b --
 $940c $fe0e   k22: jmp,   ( k16 k6 -- ) \ k6=0 for 16b addr
 $940e $fe0e   k22: call,  ( k16 k6 -- ) \ k6=0 for 16b addr
 
+
 [ifdef] meta
-    \G Relative addr, for jump back, <radr rjmp
-    : <radr     ( adr-t -- k )
-        (here-t) - 2 / 1 - 
-    dup $f000 and 0= invert
-    if
-        u. abort"  Too big! "
-    then
+\G Relative addr, for jump back, <radr rjmp
+: <radr     ( adr-t -- k )
+    (here-t) - 2 / 1 - 
+    dup $f000 > abort"  Too big! "
+    $0fff and
     ;
 [endif]
 
