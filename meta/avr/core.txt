@@ -2,7 +2,7 @@
 \ FlashForth primitives in assembler and words in FORTH language      *
 \    Filename:      core.txt                                          *
 \    Date:          11.04.2021                                        *
-\    Updated:       07.05.2021                                        *
+\    Updated:       14.05.2021                                        *
 \    MCU:           Atmega                                            *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
@@ -10,7 +10,9 @@
 \ adapted from ff-atmega.asm - author Mickael NORDMANN                *
 \ *********************************************************************
 
-cr ."   avr/    core.txt"
+cr ."       avr/    core.txt"
+
+
 
 \ set order: only forth also   Xassembler definitions also
 \ in-Xassembler
@@ -20,9 +22,11 @@ string DATE
 s" 28.04.2021" DATE $!
 
 \ select meta vocabulary
-only
-forth also meta also
-forth
+\ only
+\ forth also 
+\ Xassembler also
+\ meta also
+
 
 \ *******************************************************************
 \  Start of kernel
@@ -37,8 +41,6 @@ forth
 \     #include  "usbcdc.asm"
 \ .endif
 \ ***********************************************************
-
-Xassembler
 
 
 
@@ -273,7 +275,7 @@ code xor ( n1 n2 -- n3 )
 end-code
 
 
-\ Coplement to 1 from n ::  tested OK 07may2021
+\ Complement to 1 from n ::  tested OK 07may2021
 code invert ( n -- -n-1 )
   label INVERT
     tosl com,
@@ -291,8 +293,18 @@ code negate ( n -- -n )
     ret,
 end-code
 
-\ : negateX
-\     invert 1+ ;
+
+\ increment integer 1 unit  ::  tested OK 05may2021
+code 1+ ( n -- n+1)
+  label ONEPLUS
+    tosl 1 adiw,
+    ret,
+end-code
+
+
+\ : negate
+\     invert 1+ 
+\     ;
 
 
 \ label IFETCH
@@ -484,6 +496,28 @@ end-code
 
 
 
+\         .db NFA|3,">xa"
+\ TO_XA:
+\          sub_pflash_tos
+\          rampv_to_c
+\          ror tosh
+\          ror tosl
+\          ret
+
+code >xa
+  label TO_XA
+    sub_pflash_tos
+    rampv_to_c
+    tosh ror,
+    tosl ror, 
+    ret,
+end-code
+
+
+
+
+
+
 \ Addition of two integers  ::  tested OK 05may2021
 code + ( n1 n2 -- n1+n2 )
   label PLUS
@@ -505,14 +539,6 @@ code - ( n1 n2 -- n1-n2)
     tosl t0 movw,
     ret,
 end-code \ inline  @TODO: traiter directive "inline" et "immediate"
-
-
-\ increment integer 1 unit  ::  tested OK 05may2021
-code 1+ ( n -- n+1)
-  label ONEPLUS
-    tosl 1 adiw,
-    ret,
-end-code
 
 
 \ decrement integer 1 unit  ::  tested OK 05may2021
@@ -769,8 +795,8 @@ end-code
 \         ret
 
 \ Compile a return
-code Xexit ( --)
-\   label EXIT
+code xexit ( --)
+  label EXIT
     m_pop_t0
     t0 pop,
     t0 pop,
@@ -779,25 +805,16 @@ end-code
 
 
 
-\         .db     NFA|4,"idle",0
-\ IDLE:
-\         sbr     FLAGS2, (1<<fIDLE)
-\         ret
 
-code idle
+\ Cpu idle mode is allowed  ::  tested OK 14may2021
+code idle  ( -- )
   label IDLE
     FLAGS2  1 fIDLE <<  sbr,
     ret,
 end-code
 
 
-\         .db     NFA|4,"busy",0
-\ BUSY:
-\         cbr     FLAGS2, (1<<fIDLE)
-\         ret
-
-
-\ CPU idle mode not allowed
+\ CPU idle mode not allowed  ::  tested OK 14may2021
 code busy ( -- )
   label BUSY
     FLAGS2  1 fIDLE <<  cbr,
@@ -820,7 +837,7 @@ end-code
 
 
 
-\ Increment addr to next cell ::  tested OK 07may2021
+\ Increment addr to next cell  ::  tested OK 07may2021
 code cell+ ( a-addr1 -- a-addr2 )
   label CELLPLUS
     tosl 2 adiw,
@@ -828,8 +845,7 @@ code cell+ ( a-addr1 -- a-addr2 )
 end-code
 
 
-
-\ cells->adrs units ::  tested OK 07may2021
+\ cells->adrs units  ::  tested OK 07may2021
 code cells ( n1 -- n2 )
   label CELLS
     tosl lsl,
@@ -952,14 +968,9 @@ FLASHEND $1ffff < [if]
 
 
 
-    \ WDR ( -- )    kick the dog
-    \         .db     NFA|INLINE|3,"cwd"
-    \ CWD:
-    \         wdr
-    \         ret
-
+    \ Clear the WatchDog counter.  ::  tested OK 14may2021
     code cwd ( -- )
-      label CWD
+     label CWD
         wdr,
         ret,
     end-code
@@ -984,17 +995,17 @@ FLASHEND $1ffff < [if]
 
 code rshift ( x1 u -- x2 )
   label RSHIFT
-    zl tosl movw,
-\         poptos
+    ZL tosl movw,
+    poptos
   label   RSHIFT1
-\         sbiw,    zl 1
+    ZL 1 sbiw,    
 \         brmi    RSHIFT2
     mi, not, if,
-\         lsr ,    tosh
-\         ror,     tosl
-\         rjmp    RSHIFT1
+        tosh lsr,    
+        tosl ror,     
+        RSHIFT1 <radr rjmp,
     then,
-\ RSHIFT2:
+\   label RSHIFT2
     ret,
 end-code
 
@@ -1163,14 +1174,7 @@ code (s
 end-code
 
 
-\ ALIGNED  addr -- a-addr       align given addr
-\         .db     NFA|7,"aligned"
-\ ALIGNED:
-\         adiw    tosl, 1
-\         cbr     tosl, 1
-\         ret
-
-\ align given addr
+\ align given addr. Align addr to a cell boundary.  ::  tested OK 14may2021
 code aligned ( addr -- a-addr )
   label ALIGNED:
     tosl 1 adiw,
@@ -1179,15 +1183,8 @@ code aligned ( addr -- a-addr )
 end-code
 
 
-
-\ CHARPLUS_L:
-\         .db     NFA|INLINE|5,"char+"
-\ CHARPLUS:
-\         adiw    tosl, 1
-\         ret
-
-\ add char size
-code char+ ( c-addr1 -- c-addr2 )
+\ add char size Add one to c.addr1  ::  tested OK 14may2021
+code xchar+ ( c-addr1 -- c-addr2 )
   label CHARPLUS
     tosl 1 adiw,
     ret,
@@ -1230,15 +1227,10 @@ code dp ( -- a-addr )
 end-code
 
 
-\         .db     NFA|INLINE4|1,"1"
-\ ONE:
-\         pushtos
-\         ldi     tosl, 1
-\         ldi     tosh, 0
-\         ret
 
-code 1
-  label ONE
+\ leave 1  ::  tested OK 14may2021
+code x1  ( -- 1 )
+\  label ONE
     pushtos
     tosl 1 ldi,
     tosh 0 ldi,
@@ -1273,30 +1265,19 @@ code r@
 end-code
 
 
-\         .db     NFA|5,"false"
-\ FALSE_:                     \ TOS is 0000 (FALSE)
-\         pushtos
-\         clr     tosl
-\         clr     tosh
-\         ret
 
+\ leave FALSE  ::  tested OK 14may2021
 code false
   label FALSE_      \ TOS is 0000 (FALSE)
-pushtos
+    pushtos
     tosl clr,
     tosh clr,
     ret,
 end-code
 
 
-\         .db     NFA|4,"true",0
-\ TRUE_:                      \ TOS is ffff (TRUE)
-\         pushtos
-\         ser     tosl
-\         ser     tosh
-\         ret
-
-code true
+\ leave TRUE  ::  tested OK 14may2021
+code true  ( -- -1 )
   label TRUE_       \ TOS is ffff (TRUE)
     pushtos
     tosl ser,
@@ -1305,16 +1286,7 @@ code true
 end-code
 
 
-
-
-\         .db     NFA|4,"cell",0
-\ CELL:
-\         pushtos
-\         ldi     tosl, 2
-\         ldi     tosh, 0
-\         ret
-
-\ size of one cell
+\ size of one cell  ::  tested OK 14may2021
 code cell ( -- n )
   label CELL
     pushtos
@@ -1324,41 +1296,21 @@ code cell ( -- n )
 end-code
 
 
-
-
-
-
-
-\         .db     NFA|2,"d+",0
-\ DPLUS:
-\         ld      xl, Y+
-\         ld      xh, Y+
-\         ld      t6, Y+
-\         ld      t7, Y+
-\         ld      t0, Y+
-\         ld      t1, Y+
-\         add     xl, t0
-\         adc     xh, t1
-\         adc     tosl, t6
-\         adc     tosh, t7
-\         st      -Y, xh
-\         st      -Y, xl
-\         ret
-
-code d+
-  label DPLUS
-    xl Y+ ld,
-    xh Y+ ld,
+\ Add double numbers  ::  tested OK 14may2021
+code d+  ( d d -- d )
+ label DPLUS
+    XL Y+ ld,
+    XH Y+ ld,
     t6 Y+ ld,
     t7 Y+ ld,
     t0 Y+ ld,
     t1 Y+ ld,
-    xl t0 add,
-    xh t1 adc,
+    XL t0 add,
+    XH t1 adc,
     tosl t6 adc,
     tosh t7 adc,
-    -Y xh st,
-    -Y xl st,
+    XH -Y  st,
+    XL -Y  st,
     ret,
 end-code
 
@@ -1535,10 +1487,7 @@ end-code
 \ .endif
 
 
-\         .db     NFA|INLINE|5,"chars"
-\ CHARS:  ret
-
-\ chars->adrs units
+\ Convert characters to address units  ::  tested OK 14may2021
 code chars ( n1 -- n2 )
   label CHARS
     ret,
@@ -1551,6 +1500,7 @@ end-code
 \         adc     ph, r_zero
 \         ret
 
+\ Increment P register by one
 code p+ ( -- )
   label PPLUS
     pl r_one add,
@@ -1708,6 +1658,7 @@ UARTS 2 = [if]
 \         sbc     tosh, tosh
 \         ret
 
+\ Leave true flag if u1 is less than u2
 code u< ( u1 u2 -- fl )
   label ULESS
     MINUS <radr rcall,          \ Carry is valid after MINUS
@@ -1832,15 +1783,8 @@ end-code
 
 
 
-
-\         .db     NFA|2, "0<",0
-\ ZEROLESS:
-\         lsl     tosh
-\         sbc     tosl, tosl
-\         sbc     tosh, tosh
-\         ret
-
-code 0< ( n -- fl )
+\ Leave true flag if n is less than zero ::  tested OK 14may2021
+code 0<  ( n -- fl )
   label ZEROLESS
     tosh lsl,
     tosl tosl sbc,
@@ -1849,17 +1793,11 @@ code 0< ( n -- fl )
 end-code
 
 
-
-\         .db     NFA|INLINE|3,"nip"
-\ NIP:
-\         ld      t0, y+
-\         ld      t0, y+
-\         ret
-
-code nip
+\ Remove x1 from the stack ::  tested OK 14may2021
+code nip  ( x1 x2 -- x2 )
   label NIP
-    t0 y+ ld,
-    t0 y+ ld,
+    t0 Y+ ld,
+    t0 Y+ ld,
     ret,
 end-code
 
@@ -1914,6 +1852,48 @@ code rdrop
     ret,
 end-code
 
+\         .db     NFA|3,"?0="
+\ ZEROSENSE:
+\         sbiw    tosl, 0
+\         poptos
+\         ret
+
+code ?0=
+  label ZEROSENSE
+    tosl 0 sbiw,    
+    poptos
+    ret,
+end-code
+
+
+
+\         .db     NFA|3,"d0="
+\ DZEROEQUAL:
+\         ld      xl, y+
+\         ld      xh, y+
+\         or      tosl, tosh
+\         or      tosl, xl
+\         or      tosl, xh
+\         brne    DZEROLESS_FALSE
+\ DZEROEQUAL_TRUE:
+\         ser     tosl
+\         ser     tosh
+\         ret
+
+\ True if d equals zero
+code d0=  ( d -- f )
+\         ld      xl, y+
+\         ld      xh, y+
+\         or      tosl, tosh
+\         or      tosl, xl
+\         or      tosl, xh
+\         brne    DZEROLESS_FALSE
+\ DZEROEQUAL_TRUE:
+\         ser     tosl
+\         ser     tosh
+\         ret
+    ret,
+end-code
 
 
 \ *** @END provisoire kernel en cours de réécriture ***************************
@@ -1921,16 +1901,16 @@ end-code
 \ words in FF 5.0 dictionnary to convert in meta instructions:
 \ p2+ pc@ @p hi d. ud. d> d< d= d0< d0= dinvert d2*  d-  dabs ?dnegate dnegate
 \ s>d rdrop endit next for in, inline repeat while again until begin then else if zfl
-\ pfl >xa x>r dump .s words >pr .id ms ticks r0 s0 latest state bl 2- ['] -@ ;
+\ pfl x>r dump .s words >pr .id ms ticks r0 s0 latest state bl 2- ['] -@ ;
 \ :noname : ] [ does> postpone create cr [char] ihere ( char ' lit abort" ?abort
 \ ?abort? abort prompt quit .st inlined immediate shb interpret 'source
 \ >in tiu tib ti# number? >number ud/mod ud* sign? digit? find immed? (f) c>n n>c
 \ @+ c@+ place cmove word parse \ /string source user base pad hp task ulink
 \ rsave bin hex decimal . u.r u. sign #> #s # digit <# hold up min max ?negate tuck
 \ nip / u*/mod u/ * u/mod um/mod um* 'key? 'key 'emit pc! p! p@ !p u>  > < = 0<  <> within +!
-\ m+ abs  allot ." ," s" type accept umax umin spaces space
-\ 2swap 2dup 2drop 2! 2@ cf,  align
-\ c, , here dp  2constant constant 2variable variable
+\ m+ abs  allot ." ," s" type accept spaces space
+\ 2! 2@ cf,  align
+\ c, here dp  2constant constant 2variable variable
 \ @ex key? key emit Fcy mtst scan skip n=  lshift   ic,
 \ i, operator iflush pause turnkey to is defer value fl+ fl- c! c@ @
 \ ! literal int! ;i di ei ver warm empty rx0? rx0 tx0 load- load+ busy idle
@@ -2255,19 +2235,6 @@ end-code
 
 
 
-\ 2!    x1 x2 a-addr --            store 2 cells
-\   SWAP OVER ! CELL+ ! \
-\   the top of stack is stored at the lower adrs
-\         fdw     TWOFETCH_L
-\ TWOSTORE_L:
-\         .db     NFA|2,"2!",0
-\ TWOSTORE:
-\         rcall   SWOP
-\         rcall   OVER  \ over
-\         rcall   CELLPLUS  \ cell+
-\         rcall   STORE_A
-\         jmp     STORE
-
 
 
 \ INPUT/OUTPUT ==================================
@@ -2411,8 +2378,6 @@ end-code
 
 \
 \   ABS     n   --- n1      absolute value of n
-\         fdw     DUP_L
-\ ABS_L:
 \         .db     NFA|3,"abs"
 \ ABS_:
 \         rcall   DUP  \ dup
@@ -2424,10 +2389,6 @@ end-code
 
 \
 \ m+  ( d n -- d1 )
-\         fdw     PLUS_L
-
-
-\ MPLUS_L:
 \         .db     NFA|2, "m+",0
 \ MPLUS:
 \         rcall   STOD
@@ -2593,16 +2554,6 @@ end-code
 \         rcall   DOUSER
 \         .dw     ukeyq
 
-\         .db     NFA|3,"?0="
-\ ZEROSENSE:
-\         sbiw    tosl, 0
-\         poptos
-\         ret
-
-\         .db     NFA|3,"d0="
-\ DUPZEROSENSE:
-\         sbiw    tosl, 0
-\         ret
 
 \         fdw     UKEYQ_L
 \ UMSTAR_L:
@@ -4355,17 +4306,6 @@ label IALLOT ( n -- )
 \         st      -z, r_zero
 \         movw    tosl, zl
 \         ret
-\ **************************************************************
-\         fdw     X_TO_R_L
-\ TO_XA_L:
-\         .db NFA|3,">xa"
-\ TO_XA:
-\          sub_pflash_tos
-\          rampv_to_c
-\          ror tosh
-\          ror tosl
-\          ret
-\
 
 \ **************************************************************
 \          fdw    XA_FROM_L
