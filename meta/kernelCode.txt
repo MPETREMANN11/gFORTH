@@ -5,7 +5,7 @@
 \    MCU:           All -- gForth metacompilation                     *
 \    Copyright:     Marc PETREMANN                                    *
 \    Author:        Marc PETREMANN                                    *
-\    Updated:       08.05.2021                                        *
+\    Updated:       14.05.2021                                        *
 \ *********************************************************************
 
 cr ." kernelCode.txt"
@@ -119,16 +119,16 @@ cr ." kernelCode.txt"
 
 
 \ print stack contents
-: .s ( -- )
-    space
-    sp@ s0 @ 2-
-    begin
-        2dup <
-    while
-        -@ u.
-    repeat
-    2drop
-    ;
+\ : .s ( -- )
+\     space
+\     sp@ s0 @ 2-
+\     begin
+\         2dup <
+\     while
+\         -@ u.
+\     repeat
+\     2drop
+\     ;
 
 
 
@@ -152,32 +152,32 @@ cr ." kernelCode.txt"
 
 
 \ unsigned maximum
-: umax( u1 u2 -- u )
+: umax ( u1 u2 -- u )
     2dup u<
-    if 
-        swap 
-    then 
-    drop 
+    if
+        swap
+    then
+    drop
     ;
 
 
 \ unsigned minimum
 : umin ( u1 u2 -- u)
     2dup u>
-    if 
-        swap 
+    if
+        swap
     then
-    drop 
+    drop
     ;
 
 
 \ type line to terminal u < $100
-: type ( c-addr u --) \
-    for 
-        c@+ emit 
-    next
-    drop 
-    ;
+\ : type ( c-addr u --) \
+\     for
+\         c@+ emit
+\     next
+\     drop
+\     ;
 
 
 : allot ( n --)
@@ -188,12 +188,12 @@ cr ." kernelCode.txt"
 \ append cell to current data space
 : , ( u -- )
     here !
-    cell allot 
+    cell allot
     ;
 
 
 \ append char to current data space
-; c, ( c -- )
+: c, ( c -- )
     here c!
     1 allot
     ;
@@ -206,6 +206,97 @@ cr ." kernelCode.txt"
     ;
 [endif]
 
+
+\ store 2 cells
+: 2! ( x1 x2 a-addr -- )
+    swap over !
+    cell+ !
+    ;
+
+
+\ display u unsigned
+: u.   ( u -- )
+    <# 0 #s #> type space
+    ;
+
+
+\ display u unsigned in field of n. 1<n<=255
+: u.r   ( u +n -- )
+    0 swap 
+    <# 1- 
+    for 
+        # 
+    next 
+    #s #> 
+    type space 
+    ; 
+
+
+\ display n signed
+: .    ( n -- )                  
+    <# dup abs #S swap sign #>
+    type space 
+    ; 
+
+
+: decimal  ( -- )
+    #10 base !
+    ;
+
+
+: hex  ( -- )
+    #16 base !
+    ;
+
+
+: bin  ( -- )
+    #2 base !
+    ;
+
+
+\ output a string with current data section and current base info
+: .st  ( -- ) 
+    base @ dup 
+    decimal <#  [char] , hold #s  
+    [char] < hold #> type
+    <# [char] > hold cse @ #s #> type base ! 
+    ;
+
+\ .S      --           print stack contents
+\ : .s space sp@ s0 @ 2- begin 2dup < while -@ u. repeat 2drop \
+
+\         .db     NFA|2,".s",0
+\ DOTS:
+\         rcall   SPACE_
+\         rcall   DUP  \ dup
+\         call    SPFETCH
+\         rcall   S0
+\         rcall   FETCH_A
+\         rcall   TWOMINUS
+\ DOTS1:
+\         rcall   TWODUP
+\         rcall   LESS
+\         rcall   ZEROSENSE
+\         breq    DOTS2
+\         rcall   MINUS_FETCH
+\         rcall   UDOT
+\         rjmp    DOTS1
+\ DOTS2:
+\         rcall   DROP
+\         jmp     TWODROP
+
+
+
+\ output newline      
+: cr  ( -- )
+    $0d emit
+    $0a emit
+    ;
+
+
+: to
+    is
+    ; immediate
 
 
 
