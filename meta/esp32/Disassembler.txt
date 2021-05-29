@@ -1,0 +1,131 @@
+\ ***********************************************************************
+\ ESP32 Disassembler                                                    *
+\    Filename:      Disassembler.txt                                    *
+\    Date:          28.05.2021                                          *
+\    MCU:           ESP32 -- gForth                                     *
+\    Copyright:     Marc PETREMANN                                      *
+\    Author:        Marc PETREMANN                                      *
+\    Updated:       28.05.2021                                          *
+\ ***********************************************************************
+
+\ Instructions format: ( p 593 Xtensa.pdf )
+\ RRR
+\ RSR
+\ RRI4
+\ RRI8
+\ CALLX
+\ RRRN
+\ RI16
+\ RI7
+
+\ Registers
+\ AR    address registers
+\ PC    program counter
+\       special registers (p 233 Xtensa.pdf)
+\           0   LBEG
+\           1
+\           2
+\           3
+\           4
+\           5
+\           12
+\           15
+\           16
+\           17
+
+\ Use the RUR.* and WUR.* instructions to access the user registers.
+\       user registers (p261 Xtensa pdf)
+\           0..223  
+\           231     THREADPTR
+\           232     FCR
+\           233     FSR
+
+
+\ RRR         23      19      15      11       7       3     0
+\             +-------+-------+-------+-------+-------+-------+
+\ Little End. |  op2  |  op1  |   r   |   s   |   t   |  op0  |
+\             +-------+-------+-------+-------+-------+-------+
+
+: (RRR) 
+    ;
+
+: RRR: ( comp: op0 op1 op2 -- | exec: -- )
+    create
+        , , ,
+    does>
+        (RRR)
+    ;
+
+%0000 %0000 %0110 RRR: ABS          \ Absolute Value
+%0000 %1010 %1111 RRR: ABS.S        \ Absolute Value Single
+%0000 %0000 %1000 RRR: ADD          \ Add
+
+
+\ RRRN        15      11       7       3     0
+\             +-------+-------+-------+-------+
+\ Little End. |   r   |   s   |   t   |  op0  |
+\             +-------+-------+-------+-------+
+
+: (RRRN) 
+    ;
+
+: RRRN: ( comp: op0 -- | exec: -- )
+    create
+        ,
+    does>
+        (RRRN)
+    ;
+
+%1010 RRRN: ADD.N                   \ Narrow Add
+
+
+
+
+
+
+
+%00001010 opCode: ADD.S
+\ ADDI
+\ ADDI.N
+\ ADDMI
+%10010000 opCode: ADDX2
+%10100000 opCode: ADDX4
+%10110000 opCode: ADDX8
+%00000000 opCode: ALL4   ( @TODO.... )
+%00000000 opCode: ALL8   ( @TODO.... )
+%00010000 opCode: AND
+%00000010 opCode: ANDB
+%00010010 opCode: ANDBC
+%00000000 opCode: ANY4   ( @TODO.... )
+%00000000 opCode: ANY8   ( @TODO.... )
+\ BALL
+\ BANY
+\ BBC
+\ BBCI
+\ BBCI.L
+\ BBS
+\ BBSI
+\ BBSI.L
+\ BEQ
+\ BEQI
+\ BEQZ
+\ BEQZ.N
+\ ......
+%00000000 opCode: BREAK   ( @TODO.... )
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+ 
