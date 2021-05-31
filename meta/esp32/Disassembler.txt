@@ -5,18 +5,232 @@
 \    MCU:           ESP32 -- gForth                                     *
 \    Copyright:     Marc PETREMANN                                      *
 \    Author:        Marc PETREMANN                                      *
-\    Updated:       28.05.2021                                          *
+\    Updated:       31.05.2021                                          *
 \ ***********************************************************************
 
-\ Instructions format: ( p 593 Xtensa.pdf )
-\ RRR
+\ assembly instructions for ESP32 are taken from this document:
+\ https://github.com/MPETREMANN11/gFORTH/blob/master/meta/esp32/xtensa.pdf
+
+vocabulary ESP32disassembler
+ESP32disassembler definitions
+only forth also
+ESP32disassembler also  
+forth
+
+\ Instructions format: ( pages 593... Xtensa.pdf )
 \ RSR
 \ RRI4
-\ RRI8
 \ CALLX
 \ RRRN
 \ RI16
 \ RI7
+
+\ Instructions list:
+\ ABS
+\ ABS.S
+\ ADD
+\ ADD.N
+\ ADD.S
+\ ADDI
+\ ADDI.N
+\ ADDMI
+\ ADDX2
+\ ADDX4
+\ ADDX8
+\ ALL4
+\ ALL8
+\ AND
+\ ANDB
+\ ANDBC
+\ ANY4
+\ ANY8
+\ BALL
+\ BANY
+\ BBC
+\ BBCI
+\ BBCI.L
+\ BBS
+\ BBSI
+\ BBSI.L
+\ BEQ
+\ BEQI
+\ BEQZ
+\ BEQZ.N
+\ BF
+\ BGE
+\ BGEI
+\ BGEU
+\ BGEUI
+\ BGEZ
+\ BLT
+\ BLTI
+\ BLTU
+\ BLTUI
+\ BLTZ
+\ BNALL
+\ BNE
+\ BNEI
+\ BNEZ
+\ BNONE
+\ BREAK
+\ BT
+\ CALL0
+\ CALL4
+\ CALL8
+\ CALL12
+\ CALLX0
+\ CALLX4
+\ CALLX8
+\ CALLX12
+\ CEIL.S
+\ CLAMPS
+\ DHI
+\ DHU
+\ DHWB
+\ DHWBI
+\ DII
+\ DIU
+\ DIWB
+\ DIWBI
+\ DPFL
+\ DPFT
+\ DPFRO
+\ DPFW
+\ DPFWO
+\ DSYNC
+\ ENTRY
+\ ESYNC
+\ EXCW
+\ EXTUI
+\ EXTW
+\ FLOAT.S
+\ FLOOR.S
+\ IDTLB
+\ IHI
+\ IHU
+\ III
+\ IITLB
+\ IIU
+\ ILL
+\ ILL.N
+\ IPF
+\ IPFL
+\ ISYNC
+\ J
+\ J.L
+\ JX
+\ L8UI
+\ L16SI
+\ L16UI
+\ L32AI
+\ L32E
+\ L32I
+\ L32I.N
+\ L32R
+\ LDCT
+\ LDDEC
+\ LDINC
+\ LICT
+\ LICW
+\ LOOP
+\ LOOPGTZ
+\ LOOPNEZ
+\ LSI
+\ LSIU
+\ LSX
+\ LSXU
+\ MADD.S
+\ MAX
+\ MAXU
+\ MEMW
+\ MIN
+\ MINU
+\ MOV
+\ MOV.N
+\ MOV.S
+\ MOVEQZ
+\ MOVEQZ.S
+\ MOVF
+\ MOVF.S
+\ MOVGEZ
+\ MOVGEZ.S
+\ MOVI
+\ MOVI.N
+\ MOVLTZ
+\ MOVLTZ.S
+\ MOVNEZ
+\ MOVNEZ.S
+\ MOVSP
+\ MOVT
+\ MOVT.S
+\ MSUB.S
+\ MUL.AA
+\ MUL.AD
+\ MUL.DA
+\ MUL.DD
+\ MUL.S
+\ MUL16S
+\ MUL16U
+\ MULA.AA
+\ MULA.AD
+\ MULA.DA
+\ MULA.DD
+\ MULL
+\ MULS.AA
+\ MULS.AD
+\ MULS.DA
+\ MULS.DD
+\ MULSH
+\ MULUH
+\ NEG
+\ NEG.S
+\ NOP
+\ NOP.N
+\ NSA
+\ NSAU
+\ OEQ.S
+\ OLE.S
+\ OLT.S
+\ OR
+\ ORB
+\ ORBC
+\ PDLTB
+\ PITLB
+\ QUOS
+\ QUOU
+\ RDTLB0
+\ RDTLB1
+\ REMS
+\ REMU
+\ RER
+\ RET
+\ RET.N
+\ RETW
+\ RETW.N
+\ RFFD
+\ RFDE
+\ RFDO
+\ RFE
+\ RFI \0..15
+\ RFME
+\ RFR
+\ RFUE
+\ RFWO
+\ RFWU
+\ RITBLB0
+\ RITBLB1
+\ ROTW
+\ ROUND.S
+\ RSIL
+\ RSR.*
+\ RSR
+\ RSRat
+\ RSYNC
+\ RUR
+\ RUR.*
+\ ....
+
+
 
 \ Registers
 \ AR    address registers
@@ -41,91 +255,173 @@
 \           233     FSR
 
 
+\ **** My firsts ESP32 dissambling words ************************************
+
+\ get op0 from addr
+: @op2 { addr -- op0 }
+    addr cell+ @                \ get op0
+    ;
+
+\ get op1 from addr
+: @op1 { addr -- op0 }
+    addr cell+ cell+ @          \ get op1
+    ;
+
+\ get op0 from addr
+: @op0 { addr -- op0 }
+    addr cell+ cell+ cell+ @    \ get op2
+    ;
+
+\ get op0 op1 op2 from addr
+: @op012 { addr -- op0 op1 op2 }
+\ break" @op012 : "
+    addr @op0    \ get op0
+    addr @op1    \ get op1
+    addr @op2    \ get op2
+    ;
+
+
+\ +------------------------------------------------------------------------+
+\ Instructions format: ( pages 593... Xtensa.pdf )
+
 \ RRR         23      19      15      11       7       3     0
 \             +-------+-------+-------+-------+-------+-------+
 \ Little End. |  op2  |  op1  |   r   |   s   |   t   |  op0  |
 \             +-------+-------+-------+-------+-------+-------+
 
-: (RRR) 
+\ transform op0 op1 and op2 in a 24 bits mask
+: (RRR)  { op0 op1 op2 } ( op0 op1 op2 -- mask )
+\ break" (RRR) : "
+    op0
+    op1 15 lshift or
+    op2 19 lshift or
+    %111111110000000000001111       \ initial 24 bits mask
+    and
     ;
 
-: RRR: ( comp: op0 op1 op2 -- | exec: -- )
+\ length in byte of instruction
+: RRR: ( comp: op0 op1 op2 length -- | exec: -- )
     create
-        , , ,
+        , , , ,
     does>
-        (RRR)
+        @op012 (RRR)
     ;
 
-%0000 %0000 %0110 RRR: ABS          \ Absolute Value
-%0000 %1010 %1111 RRR: ABS.S        \ Absolute Value Single
-%0000 %0000 %1000 RRR: ADD          \ Add
 
+
+%0000 %0000 %0110 3 RRR: ABS        \ Absolute Value
+%0000 %1010 %1111 3 RRR: ABS.S      \ Absolute Value Single
+%0000 %0000 %1000 3 RRR: ADD        \ Add
+%0000 %1010 %0000 3 RRR: ADD.S      \ Add Single 
+%0000 %0000 %1001 3 RRR: ADDX2      \ Add with Shift by 1
+%0000 %0000 %1010 3 RRR: ADDX4      \ Add with Shift by 2
+%0000 %0000 %1011 3 RRR: ADDX8      \ Add with Shift by 3
+\ ALL4  b12..b15 = 1001
+\ ALL8  b12..b15 = 1011
+%0000 %0000 %0001 3 RRR: AND        \ Bitwise Logical And
+%0000 %0010 %0000 3 RRR: ANDB       \ Boolean And
+%0000 %0010 %0001 3 RRR: ANDBC      \ Boolean And with Complement
+\ ANY4
+\ ANY8
+
+
+
+
+\ +------------------------------------------------------------------------+
+\ Instructions format: ( pages 596... Xtensa.pdf )
 
 \ RRRN        15      11       7       3     0
 \             +-------+-------+-------+-------+
 \ Little End. |   r   |   s   |   t   |  op0  |
 \             +-------+-------+-------+-------+
 
-: (RRRN) 
+: (RRRN) { op0 -- mask }
+    %0000000000001111               \ initial 16 bits mask
+        op0 and
     ;
 
-: RRRN: ( comp: op0 -- | exec: -- )
+: RRRN: ( comp: op0 length -- | exec: -- )
     create
-        ,
+        , ,
     does>
-        (RRRN)
+        @op0 (RRRN)
     ;
 
-%1010 RRRN: ADD.N                   \ Narrow Add
+%1010 2 RRRN: ADD.N                 \ Narrow Add
+%1011 2 RRRN: ADDI.N                \ Narrow Add Immediate
 
 
+\ +------------------------------------------------------------------------+
+\ Instructions format: ( pages 594... Xtensa.pdf )
+
+\ RRI8        23              15      11       7       3     0
+\             +-------+-------+-------+-------+-------+-------+
+\ Little End. |     imm8      | 1100  |   s   |   t   |  0010 |
+\             +-------+-------+-------+-------+-------+-------+
+
+: (RRI8) { op0 -- mask }
+    ;
+
+: RRI8: ( comp: op0 op1 length -- | exec: -- )
+    create
+        , , ,
+    does>
+        (RRI8)
+    ;
+
+\ ADDI \ Add Immediate
+\ ADDMI \ Add Immediate with Shift by 8
+%0111 %0100 3 RRI8: BALL             \ Branch if All Bits Set
 
 
+variable nbINSTR
+
+: compINSTR ( --- <name> )
+\ break" compINSTR : "
+    '                               \ get CFA from <name>
+    dup execute ,                   \ compile mask
+    ,                               \ compile cfa
+    1 nbINSTR +!                    \ increment nbINSTR counter
+    ; immediate
 
 
+ESP32disassembler also
 
-%00001010 opCode: ADD.S
+\ array with list of instructions
+create listINSTR
+    compINSTR ABS
+    compINSTR ABS.S
+    compINSTR ADD
+\ ADD.N
+    compINSTR ADD.S
 \ ADDI
 \ ADDI.N
 \ ADDMI
-%10010000 opCode: ADDX2
-%10100000 opCode: ADDX4
-%10110000 opCode: ADDX8
-%00000000 opCode: ALL4   ( @TODO.... )
-%00000000 opCode: ALL8   ( @TODO.... )
-%00010000 opCode: AND
-%00000010 opCode: ANDB
-%00010010 opCode: ANDBC
-%00000000 opCode: ANY4   ( @TODO.... )
-%00000000 opCode: ANY8   ( @TODO.... )
-\ BALL
-\ BANY
-\ BBC
-\ BBCI
-\ BBCI.L
-\ BBS
-\ BBSI
-\ BBSI.L
-\ BEQ
-\ BEQI
-\ BEQZ
-\ BEQZ.N
-\ ......
-%00000000 opCode: BREAK   ( @TODO.... )
+    compINSTR ADDX2
+    compINSTR ADDX4
+    compINSTR ADDX8
+\ ALL4
+\ ALL8
+    compINSTR AND
+    compINSTR ANDB
+    compINSTR ANDBC
+\ ANY4
+\ ANY8
 
 
 
 
+\ display list of instructions
+: dispINTSRs ( -- )
+    cr ." defined ESP32 instructions:" cr
+    nbINSTR @ 0 do
+        i cell * 2*   \ calculate offset in listINSTR
+        listINSTR + \ effective addr
+        dup  @ 10 u.r  space 
+            cell + @ >name .id
+        cr
+    loop
+    ;
 
-
-
-
- 
-
-
-
-
-
-
-
+dispINTSRs
  
