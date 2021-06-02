@@ -1,0 +1,390 @@
+\ ***********************************************************************
+\ Display list ESP32 Assembler words                                    *
+\    Filename:      ESP32listINSTR.txt                                  *
+\    Date:          02.06.2021                                          *
+\    MCU:           ESP32 -- gForth                                     *
+\    Copyright:     Marc PETREMANN                                      *
+\    Author:        Marc PETREMANN                                      *
+\    Updated:       02.06.2021                                          *
+\ ***********************************************************************
+
+\ called from Disassembler.txt
+
+variable nbINSTR
+
+
+: ttt
+    parse-name 
+    find-name 
+    0= if
+        0 exit
+    then
+    
+    ;
+
+
+: compINSTR ( --- <name> )
+\ break" compINSTR : "
+    parse-name  find-name           \ get CFA from <name> | 0 if word not found
+    ?dup 0= if
+        exit
+    then
+    dup execute ,                   \ compile mask
+    ,                               \ compile cfa
+    1 nbINSTR +!                    \ increment nbINSTR counter
+    ; immediate
+
+
+
+ESP32disassembler also
+
+\ array with list of instructions
+create listINSTR
+    compINSTR ABS
+    compINSTR ABS.S
+    compINSTR ADD
+    compINSTR ADD.N
+    compINSTR ADD.S
+    compINSTR ADDI
+    compINSTR ADDI.N
+     compINSTR ADDMI
+    compINSTR ADDX2
+    compINSTR ADDX4
+    compINSTR ADDX8
+    compINSTR ALL4
+    compINSTR ALL8
+    compINSTR AND
+    compINSTR ANDB
+    compINSTR ANDBC
+    compINSTR ANY4
+    compINSTR ANY8
+    compINSTR BALL
+    compINSTR BANY
+    compINSTR BBC
+    compINSTR BBCI
+    compINSTR BBCI.L
+    compINSTR BBS
+    compINSTR BBSI
+    compINSTR BBSI.L
+    compINSTR BEQ
+    compINSTR BEQI
+    compINSTR BEQZ
+    compINSTR BEQZ.N
+    compINSTR BF
+    compINSTR BGE
+    compINSTR BGEI
+    compINSTR BGEU
+    compINSTR BGEUI
+    compINSTR BGEZ
+    compINSTR BLT
+    compINSTR BLTI
+    compINSTR BLTU
+    compINSTR BLTUI
+    compINSTR BLTZ
+    compINSTR BNALL
+    compINSTR BNE
+    compINSTR BNEI
+    compINSTR BNEZ
+    compINSTR BNONE
+    compINSTR BREAK
+\     compINSTR BT
+    compINSTR CALL0
+    compINSTR CALL4
+    compINSTR CALL8
+    compINSTR CALL12
+    compINSTR CALLX0
+    compINSTR CALLX4
+    compINSTR CALLX8
+    compINSTR CALLX12
+    compINSTR CEIL.S
+    compINSTR CLAMPS
+    compINSTR DHI
+    compINSTR DHU
+    compINSTR DHWB
+    compINSTR DHWBI
+    compINSTR DII
+    compINSTR DIU
+    compINSTR DIWB
+    compINSTR DIWBI
+    compINSTR DPFL
+    compINSTR DPFT
+    compINSTR DPFRO
+    compINSTR DPFW
+    compINSTR DPFWO
+    compINSTR DSYNC
+    compINSTR ENTRY
+    compINSTR ESYNC
+    compINSTR EXCW
+    compINSTR EXTUI
+    compINSTR EXTW
+    compINSTR FLOAT.S
+    compINSTR FLOOR.S
+    compINSTR IDTLB
+    compINSTR IHI
+    compINSTR IHU
+    compINSTR III
+    compINSTR IITLB
+    compINSTR IIU
+    compINSTR ILL
+    compINSTR ILL.N
+    compINSTR IPF
+    compINSTR IPFL
+    compINSTR ISYNC
+\     compINSTR J
+    compINSTR J.L
+    compINSTR JX
+    compINSTR L8UI
+    compINSTR L16SI
+    compINSTR L16UI
+    compINSTR L32AI
+    compINSTR L32E
+    compINSTR L32I
+    compINSTR L32I.N
+    compINSTR L32R
+    compINSTR LDCT
+    compINSTR LDDEC
+    compINSTR LDINC
+    compINSTR LICT
+    compINSTR LICW
+\     compINSTR LOOP
+    compINSTR LOOPGTZ
+    compINSTR LOOPNEZ
+    compINSTR LSI
+    compINSTR LSIU
+    compINSTR LSX
+    compINSTR LSXU
+    compINSTR MADD.S
+\     compINSTR MAX
+    compINSTR MAXU
+    compINSTR MEMW
+\     compINSTR MIN
+    compINSTR MINU
+    compINSTR MOV
+    compINSTR MOV.N
+    compINSTR MOV.S
+    compINSTR MOVEQZ
+    compINSTR MOVEQZ.S
+    compINSTR MOVF
+    compINSTR MOVF.S
+    compINSTR MOVGEZ
+    compINSTR MOVGEZ.S
+    compINSTR MOVI
+    compINSTR MOVI.N
+    compINSTR MOVLTZ
+    compINSTR MOVLTZ.S
+    compINSTR MOVNEZ
+    compINSTR MOVNEZ.S
+    compINSTR MOVSP
+    compINSTR MOVT
+    compINSTR MOVT.S
+    compINSTR MSUB.S
+    compINSTR MUL.AA
+    compINSTR MUL.AD
+    compINSTR MUL.DA
+    compINSTR MUL.DD
+    compINSTR MUL.S
+    compINSTR MUL16S
+    compINSTR MUL16U
+    compINSTR MULA.AA
+    compINSTR MULA.AD
+    compINSTR MULA.DA
+    compINSTR MULA.DD
+    compINSTR MULL
+    compINSTR MULS.AA
+    compINSTR MULS.AD
+    compINSTR MULS.DA
+    compINSTR MULS.DD
+    compINSTR MULSH
+    compINSTR MULUH
+    compINSTR NEG
+    compINSTR NEG.S
+    compINSTR NOP
+    compINSTR NOP.N
+    compINSTR NSA
+    compINSTR NSAU
+    compINSTR OEQ.S
+    compINSTR OLE.S
+    compINSTR OLT.S
+\     compINSTR OR
+    compINSTR ORB
+    compINSTR ORBC
+    compINSTR PDLTB
+    compINSTR PITLB
+    compINSTR QUOS
+    compINSTR QUOU
+    compINSTR RDTLB0
+    compINSTR RDTLB1
+    compINSTR REMS
+    compINSTR REMU
+    compINSTR RER
+    compINSTR RET
+    compINSTR RET.N
+    compINSTR RETW
+    compINSTR RETW.N
+    compINSTR RFFD
+    compINSTR RFDE
+    compINSTR RFDO
+    compINSTR RFE
+    compINSTR RFI \ 0..15
+    compINSTR RFME
+    compINSTR RFR
+    compINSTR RFUE
+    compINSTR RFWO
+    compINSTR RFWU
+    compINSTR RITBLB0
+    compINSTR RITBLB1
+    compINSTR ROTW
+    compINSTR ROUND.S
+    compINSTR RSIL
+    compINSTR RSR.*
+    compINSTR RSR
+    compINSTR RSRat
+    compINSTR RSYNC
+    compINSTR RUR
+    compINSTR RUR.*
+    compINSTR RUR.*
+    compINSTR S8I
+    compINSTR S16I
+    compINSTR S32C1I
+    compINSTR S32E
+    compINSTR S32I
+    compINSTR S32I.N
+    compINSTR S32RI
+    compINSTR SDCT
+    compINSTR SEXT
+    compINSTR SICT
+    compINSTR SICW
+    compINSTR SIMCALL
+    compINSTR SLL
+    compINSTR SLLI
+    compINSTR SRA
+    compINSTR SRAI
+    compINSTR SRC
+    compINSTR SRL
+    compINSTR SRLI
+    compINSTR SSA8B
+    compINSTR SSA8L
+    compINSTR SSAI
+    compINSTR SSI
+    compINSTR SSIU
+    compINSTR SSL
+    compINSTR SSR
+    compINSTR SSX
+    compINSTR SSXU
+    compINSTR SUB
+    compINSTR SUB.S
+    compINSTR SUBX2
+    compINSTR SUBX4
+    compINSTR SYSCALL
+    compINSTR TRUNC.S
+    compINSTR UEQ.S
+    compINSTR UFLOAT
+    compINSTR ULE.S
+    compINSTR ULT.S
+    compINSTR UMUL.AA
+    compINSTR UN.S
+    compINSTR UTRUNC.S
+    compINSTR WAITI
+    compINSTR WDTLB
+    compINSTR WER
+    compINSTR WFR
+    compINSTR WITLB
+    compINSTR WSR.*
+    compINSTR WSR
+    compINSTR WUR.*
+    compINSTR WUR
+    compINSTR XOR
+    compINSTR XORB
+    compINSTR XSR.*
+    compINSTR XSR
+
+true value TOLOW
+
+\ convert upper case char to lower case if TOLOW is true
+: #H  ( c -- c' )
+\ break" --- "
+    base @ ud/mod rot dup #9 u> 
+    if     
+        TOLOW if
+            #87 +
+        else
+            #55 +
+        then
+    else    
+        #48 + 
+    then
+    hold
+    ;
+
+\ convert u in string format NNNNNN in n length string
+: #HHHHHH.  ( u n -- )
+    base @ >r  hex
+    #0 swap
+    >r <<# #H #H #H #H #H #H  #> r> over - spaces type #>> 
+    r> base !
+    ;
+
+\ convert u in string format NNNN in n length string
+: #HHHH.  ( u n -- )
+    base @ >r  hex
+    #0 swap
+    >r <<# #H #H #H #H  #> r> over - spaces type #>> 
+    r> base !
+    ;
+
+\ display name of word il n field space
+: dispID ( addr -- )
+    cell + @ >name 
+    name>string 
+    swap over type
+    10 swap - spaces
+    ;
+
+\ get length of assembler instruction
+: getLength ( addr -- n )
+    cell + @ >body @
+    ;
+
+\ display the class of word. Example:
+\ ADD created by RRR:  then display "RRR"
+: dispWClass  ( addr --- addr len )
+\ break" dispString "
+    cell + @ >body
+    cell+ cell+
+    dup @           \ get $addr 
+    swap cell+ @    \ get $len
+    type
+    ;
+
+
+\ display list of instructions
+: dispINTSRs ( -- )
+\ break" dispINTSRs : "
+     cr ." defined ESP32 instructions:" cr
+    nbINSTR @ 0 do
+        i cell * 2*             \ calculate offset in listINSTR
+        listINSTR +             \ effective addr
+        dup getLength #3 =
+        if      dup @  8 #HHHHHH.  
+        else    dup @  8 #HHHH.  
+        then
+        space
+        dup dispID              \ display header name of mnemonic
+        dispWClass              \ disp words class  
+        cr
+    loop
+    ;
+
+dispINTSRs
+
+\ must display in this form:
+\ ....
+\   0a0000 ADD.S     RRR
+\     000b ADDI.N    RRRN
+\   900000 ADDX2     RRR
+\   a00000 ADDX4     RRR
+\ ....
+
+
+
+
