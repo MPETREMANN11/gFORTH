@@ -77,27 +77,26 @@ forth
 \ **** My firsts ESP32 dissambling words ************************************
 
 \ get op0 from addr
-: @op2 { addr -- op0 }
-    addr cell+ @                \ get op0
-    ;
+\ : @op2 { addr -- op0 }
+\     addr cell+ @                \ get op0
+\     ;
 
 \ get op1 from addr
-: @op1 { addr -- op0 }
-    addr cell+ cell+ @          \ get op1
-    ;
+\ : @op1 { addr -- op0 }
+\     addr cell+ cell+ @          \ get op1
+\     ;
 
 \ get op0 from addr
-: @op0 { addr -- op0 }
-    addr cell+ cell+ cell+ @    \ get op2
-    ;
+\ : @op0 { addr -- op0 }
+\     addr cell+ cell+ cell+ @    \ get op2
+\     ;
 
 \ get op0 op1 op2 from addr
-: @op012 { addr -- op0 op1 op2 }
-\ break" @op012 : "
-    addr @op0    \ get op0
-    addr @op1    \ get op1
-    addr @op2    \ get op2
-    ;
+\ : @op012 { addr -- op0 op1 op2 }
+\     addr @op0    \ get op0
+\     addr @op1    \ get op1
+\     addr @op2    \ get op2
+\     ;
 
 
 \ +------------------------------------------------------------------------+
@@ -123,13 +122,18 @@ forth
     cell+ @
     ;
 
+
 \ length in byte of instruction
 : RRR: ( comp: op2 op1 ar  as  at op0 -- | exec: -- mask )
     create
         >RRR
+        s" RRR" swap , ,
     does>
         @mask
     ;
+
+
+
 
 \ Example:
 \  op2   op1    r     s     t    op0
@@ -156,6 +160,7 @@ forth
 : RRRN: ( comp: op0 length -- | exec: -- )
     create
         >RRRN
+        s" RRRN" swap , ,
     does>
         @mask
     ;
@@ -184,6 +189,7 @@ forth
 : CALL: ( comp: n op0 -- | exec: -- mask )
     create
         >CALL
+        s" CALL" swap , ,
     does>
         @mask
     ;
@@ -217,6 +223,7 @@ forth
 : CALLX: ( comp: op2 op1 ar as m n length -- | exec: -- mask )
     create
         >CALLX
+        s" CALLX" swap , ,
     does>
         @mask
     ;
@@ -525,339 +532,7 @@ forth
 
 
 \  = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-
-variable nbINSTR
-
-: compINSTR ( --- <name> )
-\ break" compINSTR : "
-    '                               \ get CFA from <name>
-    dup execute ,                   \ compile mask
-    ,                               \ compile cfa
-    1 nbINSTR +!                    \ increment nbINSTR counter
-    ; immediate
+include ESP32listINSTR.txt
 
 
-ESP32disassembler also
 
-\ array with list of instructions
-create listINSTR
-    compINSTR ABS
-    compINSTR ABS.S
-    compINSTR ADD
-    compINSTR ADD.N
-    compINSTR ADD.S
-\ ADDI
-    compINSTR ADDI.N
-\ ADDMI
-    compINSTR ADDX2
-    compINSTR ADDX4
-    compINSTR ADDX8
-    compINSTR ALL4
-    compINSTR ALL8
-    compINSTR AND
-    compINSTR ANDB
-    compINSTR ANDBC
-    compINSTR ANY4
-    compINSTR ANY8
-\ BALL
-\ BANY
-\ BBC
-\ BBCI
-\ BBCI.L
-\ BBS
-\ BBSI
-\ BBSI.L
-\ BEQ
-\ BEQI
-\ BEQZ
-\ BEQZ.N
-\ BF
-\ BGE
-\ BGEI
-\ BGEU
-\ BGEUI
-\ BGEZ
-\ BLT
-\ BLTI
-\ BLTU
-\ BLTUI
-\ BLTZ
-\ BNALL
-\ BNE
-\ BNEI
-\ BNEZ
-\ BNONE
-    compINSTR BREAK
-\ BT
-    compINSTR CALL0
-    compINSTR CALL4
-    compINSTR CALL8
-    compINSTR CALL12
-    compINSTR CALLX0
-    compINSTR CALLX4
-    compINSTR CALLX8
-    compINSTR CALLX12
-    compINSTR CEIL.S
-    compINSTR CLAMPS
-\ DHI
-\ DHU
-\ DHWB
-\ DHWBI
-\ DII
-\ DIU
-\ DIWB
-\ DIWBI
-\ DPFL
-\ DPFT
-\ DPFRO
-\ DPFW
-\ DPFWO
-    compINSTR DSYNC
-\ ENTRY
-\ ESYNC
-\ EXCW
-\ EXTUI
-\ EXTW
-\ FLOAT.S
-\ FLOOR.S
-\ IDTLB
-\ IHI
-\ IHU
-\ III
-\ IITLB
-\ IIU
-\ ILL
-\ ILL.N
-\ IPF
-\ IPFL
-\ ISYNC
-\ J
-\ J.L
-\ JX
-\ L8UI
-\ L16SI
-\ L16UI
-\ L32AI
-\ L32E
-\ L32I
-\ L32I.N
-\ L32R
-\ LDCT
-\ LDDEC
-\ LDINC
-\ LICT
-\ LICW
-\ LOOP
-\ LOOPGTZ
-\ LOOPNEZ
-\ LSI
-\ LSIU
-\ LSX
-\ LSXU
-\ MADD.S
-\ MAX
-\ MAXU
-\ MEMW
-\ MIN
-\ MINU
-\ MOV
-\ MOV.N
-\ MOV.S
-\ MOVEQZ
-\ MOVEQZ.S
-\ MOVF
-\ MOVF.S
-\ MOVGEZ
-\ MOVGEZ.S
-\ MOVI
-\ MOVI.N
-\ MOVLTZ
-\ MOVLTZ.S
-\ MOVNEZ
-\ MOVNEZ.S
-\ MOVSP
-\ MOVT
-\ MOVT.S
-\ MSUB.S
-\ MUL.AA
-\ MUL.AD
-\ MUL.DA
-\ MUL.DD
-\ MUL.S
-\ MUL16S
-\ MUL16U
-\ MULA.AA
-\ MULA.AD
-\ MULA.DA
-\ MULA.DD
-\ MULL
-\ MULS.AA
-\ MULS.AD
-\ MULS.DA
-\ MULS.DD
-\ MULSH
-\ MULUH
-\ NEG
-\ NEG.S
-\ NOP
-\ NOP.N
-\ NSA
-\ NSAU
-\ OEQ.S
-\ OLE.S
-\ OLT.S
-\ OR
-\ ORB
-\ ORBC
-\ PDLTB
-\ PITLB
-\ QUOS
-\ QUOU
-\ RDTLB0
-\ RDTLB1
-\ REMS
-\ REMU
-\ RER
-\ RET
-\ RET.N
-\ RETW
-\ RETW.N
-\ RFFD
-\ RFDE
-\ RFDO
-\ RFE
-\ RFI \0..15
-\ RFME
-\ RFR
-\ RFUE
-\ RFWO
-\ RFWU
-\ RITBLB0
-\ RITBLB1
-\ ROTW
-\ ROUND.S
-\ RSIL
-\ RSR.*
-\ RSR
-\ RSRat
-\ RSYNC
-\ RUR
-\ RUR.*
-\ RUR.*
-\ S8I
-\ S16I
-\ S32C1I
-\ S32E
-\ S32I
-\ S32I.N
-\ S32RI
-\ SDCT
-\ SEXT
-\ SICT
-\ SICW
-\ SIMCALL
-\ SLL
-\ SLLI
-\ SRA
-\ SRAI
-\ SRC
-\ SRL
-\ SRLI
-\ SSA8B
-\ SSA8L
-\ SSAI
-\ SSI
-\ SSIU
-\ SSL
-\ SSR
-\ SSX
-\ SSXU
-\ SUB
-\ SUB.S
-\ SUBX2
-\ SUBX4
-\ SYSCALL
-\ TRUNC.S
-\ UEQ.S
-\ UFLOAT
-\ ULE.S
-\ ULT.S
-\ UMUL.AA
-\ UN.S
-\ UTRUNC.S
-\ WAITI
-\ WDTLB
-    compINSTR WER
-\ WFR
-\ WITLB
-\ WSR.*
-\ WSR
-\ WUR.*
-\ WUR
-    compINSTR XOR
-\ XORB
-\ XSR.*
-\ XSR
-
-true value TOLOW
-
-\ convert upper case char to lower case if TOLOW is true
-: #H  ( c -- c' )
-\ break" --- "
-    base @ ud/mod rot dup #9 u> 
-    if     
-        TOLOW if
-            #87 +
-        else
-            #55 +
-        then
-    else    
-        #48 + 
-    then
-    hold
-    ;
-
-\ convert u in string format NNNNNN in n length string
-: #HHHHHH.  ( u n -- )
-    base @ >r  hex
-    #0 swap
-    >r <<# #H #H #H #H #H #H  #> r> over - spaces type #>> 
-    r> base !
-    ;
-
-\ convert u in string format NNNN in n length string
-: #HHHH.  ( u n -- )
-    base @ >r  hex
-    #0 swap
-    >r <<# #H #H #H #H  #> r> over - spaces type #>> 
-    r> base !
-    ;
-
-: dispID ( addr -- )
-    cell + @ >name .id
-    ;
-
-: getLength ( addr -- n )
-    cell + @ >body @
-    ;
-
-\ display list of instructions
-: dispINTSRs ( -- )
-\ break" dispINTSRs : "
-     cr ." defined ESP32 instructions:" cr
-    nbINSTR @ 0 do
-        i cell * 2*   \ calculate offset in listINSTR
-        listINSTR + \ effective addr
-        dup getLength #3 =
-        if
-            dup @  8 #HHHHHH.  
-        else
-            dup @  8 #HHHH.  
-        then
-        space
-        dispID
-        cr
-    loop
-    ;
-
-dispINTSRs
