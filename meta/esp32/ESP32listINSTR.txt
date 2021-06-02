@@ -127,7 +127,7 @@ create listINSTR
     compINSTR IPF
     compINSTR IPFL
     compINSTR ISYNC
-\     compINSTR J
+    compINSTR J
     compINSTR J.L
     compINSTR JX
     compINSTR L8UI
@@ -151,10 +151,10 @@ create listINSTR
     compINSTR LSX
     compINSTR LSXU
     compINSTR MADD.S
-\     compINSTR MAX
+    compINSTR MAX
     compINSTR MAXU
     compINSTR MEMW
-\     compINSTR MIN
+    compINSTR MIN
     compINSTR MINU
     compINSTR MOV
     compINSTR MOV.N
@@ -331,12 +331,17 @@ true value TOLOW
     r> base !
     ;
 
+\ disp a string followed by x spaces, n is total length of display
+: types { adr len n }
+    adr len type
+    n len - spaces 
+    ;
+
 \ display name of word il n field space
 : dispID ( addr -- )
     cell + @ >name 
     name>string 
-    swap over type
-    10 swap - spaces
+    10 types
     ;
 
 \ get length of assembler instruction
@@ -344,16 +349,24 @@ true value TOLOW
     cell + @ >body @
     ;
 
+
+
 \ display the class of word. Example:
 \ ADD created by RRR:  then display "RRR"
-: dispWClass  ( addr --- addr len )
+: dispWClass  ( addr --- )
     cell + @ >body
     cell+ cell+
     dup @           \ get $addr 
     swap cell+ @    \ get $len
-    type
+    8 types
     ;
 
+\ display comment linked to assembleur word
+: dispComment  ( addr -- )
+    cell + @ >body
+    cell+ cell+ cell+ cell+
+    count type
+    ;
 
 \ display list of instructions
 : dispINTSRs ( -- )
@@ -367,7 +380,8 @@ true value TOLOW
         then
         space
         dup dispID              \ display header name of mnemonic
-        dispWClass              \ disp words class  
+        dup dispWClass          \ disp words class  
+        dispComment
         cr
     loop
     ;
@@ -376,10 +390,10 @@ dispINTSRs
 
 \ must display in this form:
 \ ....
-\   0a0000 ADD.S     RRR
-\     000b ADDI.N    RRRN
-\   900000 ADDX2     RRR
-\   a00000 ADDX4     RRR
+\   0a0000 ADD.S     RRR     Add Single
+\     000b ADDI.N    RRRN    Narrow Add Immediate
+\   900000 ADDX2     RRR     Add with Shift by 1
+\   a00000 ADDX4     RRR     Add with Shift by 2
 \ ....
 
 
