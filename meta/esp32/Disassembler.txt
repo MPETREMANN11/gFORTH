@@ -232,28 +232,34 @@ forth
 \  op2   op1     r     s   m   n   op0
 \ %0000 %0000 %0000 %0000 %11 %00 %0000  CALLX: CALLX0
 
+: ," 
+    [char] " parse 
+    dup c,
+    0 do
+        count c,
+    loop
+    drop
+    ;
 
 
-
-
-%0110 %0000 %0000 %0001 %0000 %0000  RRR: ABS           \ Absolute Value
-%1111 %1010 %0000 %0000 %0001 %0000  RRR: ABS.S         \ Absolute Value Single
-%1000 %0000 %0000 %0000 %0000 %0000  RRR: ADD           \ Add
-%0000 %0000 %0000 %1010  RRRN: ADD.N                    \ Narrow Add
-%0000 %1010 %0000 %0000 %0000 %0000  RRR: ADD.S         \ Add Single
+%0110 %0000 %0000 %0001 %0000 %0000  RRR: ABS           ," Absolute Value"
+%1111 %1010 %0000 %0000 %0001 %0000  RRR: ABS.S         ," Absolute Value Single"
+%1000 %0000 %0000 %0000 %0000 %0000  RRR: ADD           ," Add"
+%0000 %0000 %0000 %1010  RRRN: ADD.N                    ," Narrow Add"
+%0000 %1010 %0000 %0000 %0000 %0000  RRR: ADD.S         ," Add Single"
 \ ADDI
-%0000 %0000 %0000 %1011  RRRN: ADDI.N                   \ Narrow Add Immediate
+%0000 %0000 %0000 %1011  RRRN: ADDI.N                   ," Narrow Add Immediate"
 \ ADDMI
-%1001 %0000 %0000 %0000 %0000 %0000  RRR: ADDX2         \ Add with Shift by 1
-%1010 %0000 %0000 %0000 %0000 %0000  RRR: ADDX4         \ Add with Shift by 2
-%1011 %0000 %0000 %0000 %0000 %0000  RRR: ADDX8         \ Add with Shift by 3
-%0000 %0000 %1001 %0000 %0000 %0000  RRR: ALL4          \ All 4 Booleans True
-%0000 %0000 %1011 %0000 %0000 %0000  RRR: ALL8          \ All 8 Booleans True
-%0001 %0000 %0000 %0000 %0000 %0000  RRR: AND           \ Bitwise Logical And
-%0000 %0010 %0000 %0000 %0000 %0000  RRR: ANDB          \ Boolean And
-%0001 %0010 %0000 %0000 %0000 %0000  RRR: ANDBC         \ Boolean And with Complement
-%0000 %0000 %1000 %0000 %0000 %0000  RRR: ANY4          \ Any 4 Booleans True
-%0000 %0000 %1010 %0000 %0000 %0000  RRR: ANY8          \ Any 8 Booleans True
+%1001 %0000 %0000 %0000 %0000 %0000  RRR: ADDX2         ," Add with Shift by 1"
+%1010 %0000 %0000 %0000 %0000 %0000  RRR: ADDX4         ," Add with Shift by 2"
+%1011 %0000 %0000 %0000 %0000 %0000  RRR: ADDX8         ," Add with Shift by 3"
+%0000 %0000 %1001 %0000 %0000 %0000  RRR: ALL4          ," All 4 Booleans True"
+%0000 %0000 %1011 %0000 %0000 %0000  RRR: ALL8          ," All 8 Booleans True"
+%0001 %0000 %0000 %0000 %0000 %0000  RRR: AND           ," Bitwise Logical And"
+%0000 %0010 %0000 %0000 %0000 %0000  RRR: ANDB          ," Boolean And"
+%0001 %0010 %0000 %0000 %0000 %0000  RRR: ANDBC         ," Boolean And with Complement"
+%0000 %0000 %1000 %0000 %0000 %0000  RRR: ANY4          ," Any 4 Booleans True"
+%0000 %0000 %1010 %0000 %0000 %0000  RRR: ANY8          ," Any 8 Booleans True"
 \ BALL
 \ BANY
 \ BBC
@@ -282,21 +288,21 @@ forth
 \ BNEI
 \ BNEZ
 \ BNONE
-%0000 %0000 %0100 %0000 %0000 %0000  RRR: BREAK         \ Breakpoint %0100 b12..b15
+%0000 %0000 %0100 %0000 %0000 %0000  RRR: BREAK         ," Breakpoint %0100 b12..b15"
 \ BT
-%00 %0101  CALL: CALL0             \ Non-windowed Call
-%01 %0101  CALL: CALL4             \ Call PC-relative, Rotate Window by 4
-%10 %0101  CALL: CALL8             \ Call PC-relative, Rotate Window by 8
-%11 %0101  CALL: CALL12            \ Call PC-relative, Rotate Window by 12
+%00 %0101  CALL: CALL0             ," Non-windowed Call"
+%01 %0101  CALL: CALL4             ," Call PC-relative, Rotate Window by 4"
+%10 %0101  CALL: CALL8             ," Call PC-relative, Rotate Window by 8"
+%11 %0101  CALL: CALL12            ," Call PC-relative, Rotate Window by 12"
 
-%0000 %0000 %0000 %0000 %11 %00 %0000  CALLX: CALLX0    \ Non-windowed Call Register
-%0000 %0000 %0000 %0000 %11 %01 %0000  CALLX: CALLX4    \ Call Register, Rotate Window by 4
-%0000 %0000 %0000 %0000 %11 %10 %0000  CALLX: CALLX8    \ Call Register, Rotate Window by 8
-%0000 %0000 %0000 %0000 %11 %11 %0000  CALLX: CALLX12   \ Call Register, Rotate Window by 12
+%0000 %0000 %0000 %0000 %11 %00 %0000  CALLX: CALLX0    ," Non-windowed Call Register"
+%0000 %0000 %0000 %0000 %11 %01 %0000  CALLX: CALLX4    ," Call Register, Rotate Window by 4"
+%0000 %0000 %0000 %0000 %11 %10 %0000  CALLX: CALLX8    ," Call Register, Rotate Window by 8"
+%0000 %0000 %0000 %0000 %11 %11 %0000  CALLX: CALLX12   ," Call Register, Rotate Window by 12"
 
 
-%1011 %1010 %0000 %0000 %0000 %0000  RRR: CEIL.S        \ Ceiling Single to Fixed
-%0011 %0011 %0000 %0000 %0000 %0000  RRR: CLAMPS        \ Signed Clamp
+%1011 %1010 %0000 %0000 %0000 %0000  RRR: CEIL.S        ," Ceiling Single to Fixed"
+%0011 %0011 %0000 %0000 %0000 %0000  RRR: CLAMPS        ," Signed Clamp"
 \ DHI
 \ DHU
 \ DHWB
@@ -311,7 +317,7 @@ forth
 \ DPFW
 \ DPFWO
 
-%0000 %0000 %0010 %0000 %0011 %0000  RRR: DSYNC
+%0000 %0000 %0010 %0000 %0011 %0000  RRR: DSYNC ," ..."
 \ ENTRY
 \ ESYNC
 \ EXCW
@@ -330,7 +336,7 @@ forth
 \ IPF
 \ IPFL
 \ ISYNC
-\ J
+%00 %0110  CALL: J                                      ," Unconditional Jump"
 \ J.L
 \ JX
 \ L8UI
@@ -354,14 +360,14 @@ forth
 \ LSX
 \ LSXU
 \ MADD.S
-\ MAX
+%0101 %0011 %0000 %0000 %0000 %0000  RRR: MAX       ," Maximum Value"
 \ MAXU
 \ MEMW
-\ MIN
-\ MINU
-\ MOV
-\ MOV.N
-\ MOV.S
+%0100 %0011 %0000 %0000 %0000 %0000  RRR: MIN       ," Minimum Value"
+%0110 %0011 %0000 %0000 %0000 %0000  RRR: MINU      ," Minimum Value Unsigned"
+%0010 %0000 %0000 %0000 %0000 %0000  RRR: MOV       ," Move"
+%0000 %0000 %0000 %1101  RRRN: MOV.N                ," Narrow Move"
+%1111 %1010 %0000 %0000 %0000 %0000  RRR: MOV.S     ," Move Single"
 \ MOVEQZ
 \ MOVEQZ.S
 \ MOVF
@@ -478,24 +484,24 @@ forth
 \ TRUNC.S
 \ UEQ.S
 \ UFLOAT
-\ ULE.S     \ Compare Single Unord or Less Than or Equal
-\ ULT.S     \ Compare Single Unordered or Less Than
-\ UMUL.AA.* \ Unsigned Multiply
-\ UN.S      \ Compare Single Unordered
-\ UTRUNC.S  \ Truncate Single to Fixed Unsigned
-\ WAITI     \ Wait for Interrupt
-\ WDTLB     \ Write Data TLB Entry
-%0100 %0000 %0111 %0000 %0000 %0000  RRR: WER           \ Write External Register
-\ WFR       \ Move AR to FR
-\ WITLB     \ Write Instruction TLB Entry
+\ ULE.S     ," Compare Single Unord or Less Than or Equal"
+\ ULT.S     ," Compare Single Unordered or Less Than"
+\ UMUL.AA.* ," Unsigned Multiply"
+\ UN.S      ," Compare Single Unordered"
+\ UTRUNC.S  ," Truncate Single to Fixed Unsigned"
+\ WAITI     ," Wait for Interrupt"
+\ WDTLB     ," Write Data TLB Entry"
+%0100 %0000 %0111 %0000 %0000 %0000  RRR: WER           ," Write External Register"
+\ WFR       ," Move AR to FR"
+\ WITLB     ," Write Instruction TLB Entry"
 \ WSR.*
-\ WSR       \ Write Special Register
+\ WSR       ," Write Special Register"
 \ WUR.*
-\ WUR       \ Write User Register
-%0011 %0000 %0000 %0000 %0000 %0000  RRR: XOR           \ Bitwise Logical Exclusive Or
-\ XORB      \ Boolean Exclusive Or
+\ WUR       ," Write User Register
+%0011 %0000 %0000 %0000 %0000 %0000  RRR: XOR           ," Bitwise Logical Exclusive Or"
+\ XORB      ," Boolean Exclusive Or"
 \ XSR.*
-\ XSR       \ Exchange Special Register
+\ XSR       ," Exchange Special Register"
 
 
 
