@@ -10,19 +10,16 @@
 
 \ called from Disassembler.txt
 
+\ store numbers of ESP32 assembler words
 variable nbINSTR
 
 
-: ttt
-    parse-name 
-    find-name 
-    0= if
-        0 exit
-    then
-    
-    ;
-
-
+\ store in array values of one ESP32 assembler words:
+\ 1) mask of ESP32 assembler words
+\ 2) cfa  of ESP32 assembler words
+\ example:
+\        compINSTR ABS
+\ don't store datas if ESP32 assembler word is not defined
 : compINSTR ( --- <name> )
 \ break" compINSTR : "
     parse-name  find-name           \ get CFA from <name> | 0 if word not found
@@ -35,7 +32,7 @@ variable nbINSTR
     ; immediate
 
 
-
+\ select vocabulary ESP32disassembler in top search order 
 ESP32disassembler also
 
 \ array with list of instructions
@@ -298,9 +295,11 @@ create listINSTR
     compINSTR XSR.*
     compINSTR XSR
 
+\ used by #H to send hex values in upper or lower case
+\ lower case selected by default
 true value TOLOW
 
-\ convert upper case char to lower case if TOLOW is true
+\ compile digit in upper case char to lower case if TOLOW is true
 : #H  ( c -- c' )
 \ break" --- "
     base @ ud/mod rot dup #9 u> 
@@ -348,7 +347,6 @@ true value TOLOW
 \ display the class of word. Example:
 \ ADD created by RRR:  then display "RRR"
 : dispWClass  ( addr --- addr len )
-\ break" dispString "
     cell + @ >body
     cell+ cell+
     dup @           \ get $addr 
@@ -359,7 +357,6 @@ true value TOLOW
 
 \ display list of instructions
 : dispINTSRs ( -- )
-\ break" dispINTSRs : "
      cr ." defined ESP32 instructions:" cr
     nbINSTR @ 0 do
         i cell * 2*             \ calculate offset in listINSTR
