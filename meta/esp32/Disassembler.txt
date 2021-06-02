@@ -5,7 +5,7 @@
 \    MCU:           ESP32 -- gForth                                     *
 \    Copyright:     Marc PETREMANN                                      *
 \    Author:        Marc PETREMANN                                      *
-\    Updated:       01.06.2021                                          *
+\    Updated:       02.06.2021                                          *
 \ ***********************************************************************
 
 \ assembly instructions for ESP32 are taken from this document:
@@ -41,12 +41,37 @@ forth
 \           16
 \           17
 
+\ The ESP32 has 16 registers (actually more once you get involved with the register window 
+\ business, but never mind that for now. They are designated a0 through a15.
+\ Two of them are special. a0 is used for subroutine return addresses. a1 is the stack pointer. 
+\ You can use these as general registers as long as you understand what you are doing. 
+
+
 \ Use the RUR.* and WUR.* instructions to access the user registers.
 \       user registers (p261 Xtensa pdf)
 \           0..223
 \           231     THREADPTR
 \           232     FCR
 \           233     FSR
+
+
+
+\ souyrce: http://cholla.mmto.org/esp32/bootrom/disasm.html
+\ Instructions are either 16 or 24 bits in size, but you rarely care about that. This is a RISC 
+\ machine with a load/store architecture. Data flow in the assembler syntax used is right to left, 
+\ with some exceptions (notably the s32i instruction). Think of it like an assignment statement in C. 
+\ Here are some examples:
+\     movi    a0, 0		; a0 = 0
+\     and	    a3, a3, a2		; a3 = a3 & a2
+\     sub     a13, a13, a14	; a13 -= a14
+\     l32i.n  a3, a2, 0		; a3 = *a2
+\     s32i.n  a3, a2, 0		; *a2 = a3
+\     addi    a8, a4, -1		; a8 = a4 - 1
+
+\ The l32r instruction fetches a 32 bit constant that is stored (dumped) someplace 
+\ nearby (hence the actual address where the constant is dumped is of little real 
+\ interest).
+\ l32r    a3, [0x0000abab]	; a3 = 0x0000abab
 
 
 \ **** My firsts ESP32 dissambling words ************************************
@@ -84,8 +109,8 @@ forth
 \             +-------+-------+-------+-------+-------+-------+
 
 \ transform op0 op1 and op2 in a 24 bits mask
-: >RRR  { op2 op1 ar as at op0 length }
-    length ,
+: >RRR  { op2 op1 ar as at op0 }
+    #3 ,                    \ compile length
     op0
     at   4 lshift  or
     as   8 lshift  or
@@ -99,7 +124,7 @@ forth
     ;
 
 \ length in byte of instruction
-: RRR: ( comp: op2 op1 ar  as  at op0 length -- | exec: -- mask )
+: RRR: ( comp: op2 op1 ar  as  at op0 -- | exec: -- mask )
     create
         >RRR
     does>
@@ -108,7 +133,37 @@ forth
 
 \ Example:
 \  op2   op1    r     s     t    op0
-\ %0110 %0000 %0000 %0001 %0000 %0000 3 RRR: ABS
+\ %0110 %0000 %0000 %0001 %0000 %0000  RRR: ABS
+
+
+
+\ +------------------------------------------------------------------------+
+\ Instructions format: ( pages 596... Xtensa.pdf )
+
+\ RRRN        15      11       7       3     0
+\             +-------+-------+-------+-------+
+\ Little End. |   r   |   s   |   t   |  op0  |
+\             +-------+-------+-------+-------+
+
+: >RRRN { r s t op0 -- mask }
+    #2 ,                    \ compile length
+    op0
+    t   4 lshift  or
+    s   8 lshift  or
+    r  12 lshift  or  ,
+    ;
+
+: RRRN: ( comp: op0 length -- | exec: -- )
+    create
+        >RRRN
+    does>
+        @mask
+    ;
+
+\ Example:
+\   r     s     t    op0
+\ %0000 %0000 %0000 %1010  RRRN: ADD.N                 \ Narrow Add
+
 
 
 \ +------------------------------------------------------------------------+
@@ -120,13 +175,13 @@ forth
 \             +-------+-------+-------+-------+---+---+-------+
 
 
-: >CALL  { n op0 length }
-    length ,
+: >CALL  { n op0 }
+    #3 ,                    \ compile length
     op0
     n    4 lshift  or  ,
     ;
 
-: CALL: ( comp: n op0 length -- | exec: -- mask )
+: CALL: ( comp: n op0 -- | exec: -- mask )
     create
         >CALL
     does>
@@ -135,7 +190,7 @@ forth
 
 \ Example:
 \              n   op0
-\             %00 %0000 3 CALL: CALL0
+\             %00 %0000  CALL: CALL0
 
 
 \ +------------------------------------------------------------------------+
@@ -147,9 +202,9 @@ forth
 \             +-------+-------+-------+-------+---+---+-------+
 
 
-: >CALLX  { op2 op1 ar as m n op0 length }
-break" >callx : "
-    length ,
+: >CALLX  { op2 op1 ar as m n op0 }
+\ break" >callx : "
+    #3 ,                    \ compile length
     op0
     n    4 lshift  or
     m    6 lshift  or
@@ -168,29 +223,30 @@ break" >callx : "
 
 \ Example:
 \  op2   op1     r     s   m   n   op0
-\ %0000 %0000 %0000 %0000 %11 %00 %0000 3 CALLX: CALLX0
+\ %0000 %0000 %0000 %0000 %11 %00 %0000  CALLX: CALLX0
 
 
 
 
 
-%0110 %0000 %0000 %0001 %0000 %0000 3 RRR: ABS          \ Absolute Value
-%1111 %1010 %0000 %0000 %0001 %0000 3 RRR: ABS.S        \ Absolute Value Single
-%1000 %0000 %0000 %0000 %0000 %0000 3 RRR: ADD          \ Add
-%0000 %1010 %0000 %0000 %0000 %0000 3 RRR: ADD.S        \ Add Single
+%0110 %0000 %0000 %0001 %0000 %0000  RRR: ABS           \ Absolute Value
+%1111 %1010 %0000 %0000 %0001 %0000  RRR: ABS.S         \ Absolute Value Single
+%1000 %0000 %0000 %0000 %0000 %0000  RRR: ADD           \ Add
+%0000 %0000 %0000 %1010  RRRN: ADD.N                    \ Narrow Add
+%0000 %1010 %0000 %0000 %0000 %0000  RRR: ADD.S         \ Add Single
 \ ADDI
-\ ADDI.N
+%0000 %0000 %0000 %1011  RRRN: ADDI.N                   \ Narrow Add Immediate
 \ ADDMI
-%1001 %0000 %0000 %0000 %0000 %0000 3 RRR: ADDX2        \ Add with Shift by 1
-%1010 %0000 %0000 %0000 %0000 %0000 3 RRR: ADDX4        \ Add with Shift by 2
-%1011 %0000 %0000 %0000 %0000 %0000 3 RRR: ADDX8        \ Add with Shift by 3
-%0000 %0000 %1001 %0000 %0000 %0000 3 RRR: ALL4         \ All 4 Booleans True
-%0000 %0000 %1011 %0000 %0000 %0000 3 RRR: ALL8         \ All 8 Booleans True
-%0001 %0000 %0000 %0000 %0000 %0000 3 RRR: AND          \ Bitwise Logical And
-%0000 %0010 %0000 %0000 %0000 %0000 3 RRR: ANDB         \ Boolean And
-%0001 %0010 %0000 %0000 %0000 %0000 3 RRR: ANDBC        \ Boolean And with Complement
-%0000 %0000 %1000 %0000 %0000 %0000 3 RRR: ANY4         \ Any 4 Booleans True
-%0000 %0000 %1010 %0000 %0000 %0000 3 RRR: ANY8         \ Any 8 Booleans True
+%1001 %0000 %0000 %0000 %0000 %0000  RRR: ADDX2         \ Add with Shift by 1
+%1010 %0000 %0000 %0000 %0000 %0000  RRR: ADDX4         \ Add with Shift by 2
+%1011 %0000 %0000 %0000 %0000 %0000  RRR: ADDX8         \ Add with Shift by 3
+%0000 %0000 %1001 %0000 %0000 %0000  RRR: ALL4          \ All 4 Booleans True
+%0000 %0000 %1011 %0000 %0000 %0000  RRR: ALL8          \ All 8 Booleans True
+%0001 %0000 %0000 %0000 %0000 %0000  RRR: AND           \ Bitwise Logical And
+%0000 %0010 %0000 %0000 %0000 %0000  RRR: ANDB          \ Boolean And
+%0001 %0010 %0000 %0000 %0000 %0000  RRR: ANDBC         \ Boolean And with Complement
+%0000 %0000 %1000 %0000 %0000 %0000  RRR: ANY4          \ Any 4 Booleans True
+%0000 %0000 %1010 %0000 %0000 %0000  RRR: ANY8          \ Any 8 Booleans True
 \ BALL
 \ BANY
 \ BBC
@@ -219,19 +275,21 @@ break" >callx : "
 \ BNEI
 \ BNEZ
 \ BNONE
-%0000 %0000 %0100 %0000 %0000 %0000 3 RRR: BREAK      \ Breakpoint %0100 b12..b15
+%0000 %0000 %0100 %0000 %0000 %0000  RRR: BREAK         \ Breakpoint %0100 b12..b15
 \ BT
-%00 %0101 3 CALL: CALL0             \ Non-windowed Call
-%01 %0101 3 CALL: CALL4             \ Call PC-relative, Rotate Window by 4
-%10 %0101 3 CALL: CALL8             \ Call PC-relative, Rotate Window by 8
-%11 %0101 3 CALL: CALL12            \ Call PC-relative, Rotate Window by 12
+%00 %0101  CALL: CALL0             \ Non-windowed Call
+%01 %0101  CALL: CALL4             \ Call PC-relative, Rotate Window by 4
+%10 %0101  CALL: CALL8             \ Call PC-relative, Rotate Window by 8
+%11 %0101  CALL: CALL12            \ Call PC-relative, Rotate Window by 12
 
-%0000 %0000 %0000 %0000 %11 %00 %0000 3 CALLX: CALLX0   \ Non-windowed Call Register
-%0000 %0000 %0000 %0000 %11 %01 %0000 3 CALLX: CALLX4   \ Call Register, Rotate Window by 4
-%0000 %0000 %0000 %0000 %11 %10 %0000 3 CALLX: CALLX8   \ Call Register, Rotate Window by 8
-%0000 %0000 %0000 %0000 %11 %11 %0000 3 CALLX: CALLX12  \ Call Register, Rotate Window by 12
-\ CEIL.S
-\ CLAMPS
+%0000 %0000 %0000 %0000 %11 %00 %0000  CALLX: CALLX0    \ Non-windowed Call Register
+%0000 %0000 %0000 %0000 %11 %01 %0000  CALLX: CALLX4    \ Call Register, Rotate Window by 4
+%0000 %0000 %0000 %0000 %11 %10 %0000  CALLX: CALLX8    \ Call Register, Rotate Window by 8
+%0000 %0000 %0000 %0000 %11 %11 %0000  CALLX: CALLX12   \ Call Register, Rotate Window by 12
+
+
+%1011 %1010 %0000 %0000 %0000 %0000  RRR: CEIL.S        \ Ceiling Single to Fixed
+%0011 %0011 %0000 %0000 %0000 %0000  RRR: CLAMPS        \ Signed Clamp
 \ DHI
 \ DHU
 \ DHWB
@@ -245,7 +303,8 @@ break" >callx : "
 \ DPFRO
 \ DPFW
 \ DPFWO
-\ DSYNC
+
+%0000 %0000 %0010 %0000 %0011 %0000  RRR: DSYNC
 \ ENTRY
 \ ESYNC
 \ EXCW
@@ -376,31 +435,68 @@ break" >callx : "
 \ RSYNC
 \ RUR
 \ RUR.*
-\ ....
+\ S8I
+\ S16I
+\ S32C1I
+\ S32E
+\ S32I
+\ S32I.N
+\ S32RI
+\ SDCT
+\ SEXT
+\ SICT
+\ SICW
+\ SIMCALL
+\ SLL
+\ SLLI
+\ SRA
+\ SRAI
+\ SRC
+\ SRL
+\ SRLI
+\ SSA8B
+\ SSA8L
+\ SSAI
+\ SSI
+\ SSIU
+\ SSL
+\ SSR
+\ SSX
+\ SSXU
+\ SUB
+\ SUB.S
+\ SUBX2
+\ SUBX4
+\ SYSCALL
+\ TRUNC.S
+\ UEQ.S
+\ UFLOAT
+\ ULE.S     \ Compare Single Unord or Less Than or Equal
+\ ULT.S     \ Compare Single Unordered or Less Than
+\ UMUL.AA.* \ Unsigned Multiply
+\ UN.S      \ Compare Single Unordered
+\ UTRUNC.S  \ Truncate Single to Fixed Unsigned
+\ WAITI     \ Wait for Interrupt
+\ WDTLB     \ Write Data TLB Entry
+%0100 %0000 %0111 %0000 %0000 %0000  RRR: WER           \ Write External Register
+\ WFR       \ Move AR to FR
+\ WITLB     \ Write Instruction TLB Entry
+\ WSR.*
+\ WSR       \ Write Special Register
+\ WUR.*
+\ WUR       \ Write User Register
+%0011 %0000 %0000 %0000 %0000 %0000  RRR: XOR           \ Bitwise Logical Exclusive Or
+\ XORB      \ Boolean Exclusive Or
+\ XSR.*
+\ XSR       \ Exchange Special Register
 
 
-\ +------------------------------------------------------------------------+
-\ Instructions format: ( pages 596... Xtensa.pdf )
 
-\ RRRN        15      11       7       3     0
-\             +-------+-------+-------+-------+
-\ Little End. |   r   |   s   |   t   |  op0  |
-\             +-------+-------+-------+-------+
 
-: (RRRN) { op0 -- mask }
-    %0000000000001111               \ initial 16 bits mask
-        op0 and
-    ;
 
-: RRRN: ( comp: op0 length -- | exec: -- )
-    create
-        , ,
-    does>
-        @op0 (RRRN)
-    ;
 
-\ %1010 2 RRRN: ADD.N                 \ Narrow Add
-\ %1011 2 RRRN: ADDI.N                \ Narrow Add Immediate
+
+
 
 
 \ +------------------------------------------------------------------------+
@@ -423,7 +519,7 @@ break" >callx : "
 
 \ ADDI \ Add Immediate
 \ ADDMI \ Add Immediate with Shift by 8
-\ %0111 %0100 3 RRI8: BALL             \ Branch if All Bits Set
+\ %0111 %0100  RRI8: BALL             \ Branch if All Bits Set
 
 
 
@@ -448,10 +544,10 @@ create listINSTR
     compINSTR ABS
     compINSTR ABS.S
     compINSTR ADD
-\ ADD.N
+    compINSTR ADD.N
     compINSTR ADD.S
 \ ADDI
-\ ADDI.N
+    compINSTR ADDI.N
 \ ADDMI
     compINSTR ADDX2
     compINSTR ADDX4
@@ -501,8 +597,8 @@ create listINSTR
     compINSTR CALLX4
     compINSTR CALLX8
     compINSTR CALLX12
-\ CEIL.S
-\ CLAMPS
+    compINSTR CEIL.S
+    compINSTR CLAMPS
 \ DHI
 \ DHU
 \ DHWB
@@ -516,7 +612,7 @@ create listINSTR
 \ DPFRO
 \ DPFW
 \ DPFWO
-\ DSYNC
+    compINSTR DSYNC
 \ ENTRY
 \ ESYNC
 \ EXCW
@@ -647,28 +743,121 @@ create listINSTR
 \ RSYNC
 \ RUR
 \ RUR.*
-\ ....
+\ RUR.*
+\ S8I
+\ S16I
+\ S32C1I
+\ S32E
+\ S32I
+\ S32I.N
+\ S32RI
+\ SDCT
+\ SEXT
+\ SICT
+\ SICW
+\ SIMCALL
+\ SLL
+\ SLLI
+\ SRA
+\ SRAI
+\ SRC
+\ SRL
+\ SRLI
+\ SSA8B
+\ SSA8L
+\ SSAI
+\ SSI
+\ SSIU
+\ SSL
+\ SSR
+\ SSX
+\ SSXU
+\ SUB
+\ SUB.S
+\ SUBX2
+\ SUBX4
+\ SYSCALL
+\ TRUNC.S
+\ UEQ.S
+\ UFLOAT
+\ ULE.S
+\ ULT.S
+\ UMUL.AA
+\ UN.S
+\ UTRUNC.S
+\ WAITI
+\ WDTLB
+    compINSTR WER
+\ WFR
+\ WITLB
+\ WSR.*
+\ WSR
+\ WUR.*
+\ WUR
+    compINSTR XOR
+\ XORB
+\ XSR.*
+\ XSR
 
+true value TOLOW
 
+\ convert upper case char to lower case if TOLOW is true
+: #H  ( c -- c' )
+\ break" --- "
+    base @ ud/mod rot dup #9 u> 
+    if     
+        TOLOW if
+            #87 +
+        else
+            #55 +
+        then
+    else    
+        #48 + 
+    then
+    hold
+    ;
+
+\ convert u in string format NNNNNN in n length string
+: #HHHHHH.  ( u n -- )
+    base @ >r  hex
+    #0 swap
+    >r <<# #H #H #H #H #H #H  #> r> over - spaces type #>> 
+    r> base !
+    ;
+
+\ convert u in string format NNNN in n length string
+: #HHHH.  ( u n -- )
+    base @ >r  hex
+    #0 swap
+    >r <<# #H #H #H #H  #> r> over - spaces type #>> 
+    r> base !
+    ;
+
+: dispID ( addr -- )
+    cell + @ >name .id
+    ;
+
+: getLength ( addr -- n )
+    cell + @ >body @
+    ;
 
 \ display list of instructions
 : dispINTSRs ( -- )
-    cr ." defined ESP32 instructions:" cr
+\ break" dispINTSRs : "
+     cr ." defined ESP32 instructions:" cr
     nbINSTR @ 0 do
         i cell * 2*   \ calculate offset in listINSTR
         listINSTR + \ effective addr
-        dup  @ 10 u.r  space
-            cell + @ >name .id
+        dup getLength #3 =
+        if
+            dup @  8 #HHHHHH.  
+        else
+            dup @  8 #HHHH.  
+        then
+        space
+        dispID
         cr
     loop
     ;
 
 dispINTSRs
-
-
-
-
-
-
-
-
