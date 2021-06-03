@@ -5,7 +5,7 @@
 \    MCU:           ESP32 -- gForth                                     *
 \    Copyright:     Marc PETREMANN                                      *
 \    Author:        Marc PETREMANN                                      *
-\    Updated:       02.06.2021                                          *
+\    Updated:       03.06.2021                                          *
 \ ***********************************************************************
 
 \ assembly instructions for ESP32 are taken from this document:
@@ -76,98 +76,9 @@ forth
 
 \ **** My firsts ESP32 dissambling words ************************************
 
-\ get op0 from addr
-\ : @op2 { addr -- op0 }
-\     addr cell+ @                \ get op0
-\     ;
-
-\ get op1 from addr
-\ : @op1 { addr -- op0 }
-\     addr cell+ cell+ @          \ get op1
-\     ;
-
-\ get op0 from addr
-\ : @op0 { addr -- op0 }
-\     addr cell+ cell+ cell+ @    \ get op2
-\     ;
-
-\ get op0 op1 op2 from addr
-\ : @op012 { addr -- op0 op1 op2 }
-\     addr @op0    \ get op0
-\     addr @op1    \ get op1
-\     addr @op2    \ get op2
-\     ;
-
-
-\ +------------------------------------------------------------------------+
-\ Instructions format: ( pages 593... Xtensa.pdf )
-
-\ RRR         23      19      15      11       7       3     0
-\             +-------+-------+-------+-------+-------+-------+
-\ Little End. |  op2  |  op1  |   r   |   s   |   t   |  op0  |
-\             +-------+-------+-------+-------+-------+-------+
-
-\ transform op0 op1 and op2 in a 24 bits mask
-: >RRR  { op2 op1 ar as at op0 }
-    #3 ,                    \ compile length
-    op0
-    at   4 lshift  or
-    as   8 lshift  or
-    ar  12 lshift  or
-    op1 16 lshift  or
-    op2 20 lshift  or  ,
-    ;
-
 : @mask  ( addr --- mask )
     cell+ @
     ;
-
-
-\ length in byte of instruction
-: RRR: ( comp: op2 op1 ar  as  at op0 -- | exec: -- mask )
-    create
-        >RRR
-        s" RRR" swap , ,
-    does>
-        @mask
-    ;
-
-
-
-
-\ Example:
-\  op2   op1    r     s     t    op0
-\ %0110 %0000 %0000 %0001 %0000 %0000  RRR: ABS
-
-
-
-\ +------------------------------------------------------------------------+
-\ Instructions format: ( pages 596... Xtensa.pdf )
-
-\ RRRN        15      11       7       3     0
-\             +-------+-------+-------+-------+
-\ Little End. |   r   |   s   |   t   |  op0  |
-\             +-------+-------+-------+-------+
-
-: >RRRN { r s t op0 -- mask }
-    #2 ,                    \ compile length
-    op0
-    t   4 lshift  or
-    s   8 lshift  or
-    r  12 lshift  or  ,
-    ;
-
-: RRRN: ( comp: op0 length -- | exec: -- )
-    create
-        >RRRN
-        s" RRRN" swap , ,
-    does>
-        @mask
-    ;
-
-\ Example:
-\   r     s     t    op0
-\ %0000 %0000 %0000 %1010  RRRN: ADD.N                 \ Narrow Add
 
 
 
@@ -232,6 +143,104 @@ forth
 \  op2   op1     r     s   m   n   op0
 \ %0000 %0000 %0000 %0000 %11 %00 %0000  CALLX: CALLX0
 
+
+\ +------------------------------------------------------------------------+
+\ Instructions format: ( pages 594... Xtensa.pdf )
+
+\ RRI8        23              15      11       7       3     0
+\             +-------+-------+-------+-------+-------+-------+
+\ Little End. |     imm8      |   r   |   s   |   t   |  op0  |
+\             +-------+-------+-------+-------+-------+-------+
+
+: >RRI8 { r s t op0 -- mask }
+    #3 ,                    \ compile length
+    op0
+    t    4 lshift  or
+    s    8 lshift  or
+    r   12 lshift  or  ,
+   ;
+
+: RRI8: ( comp: op0 op1 length -- | exec: -- )
+    create
+        >RRI8
+        s" RRI8" swap , ,
+    does>
+        @mask
+    ;
+
+\ Example
+\ %0111 %0000 %0010 %0010  RRI8: DPFRO ," Data Cache Prefetch for Read Once"
+
+
+
+\ +------------------------------------------------------------------------+
+\ Instructions format: ( pages 593... Xtensa.pdf )
+
+\ RRR         23      19      15      11       7       3     0
+\             +-------+-------+-------+-------+-------+-------+
+\ Little End. |  op2  |  op1  |   r   |   s   |   t   |  op0  |
+\             +-------+-------+-------+-------+-------+-------+
+
+\ transform op0 op1 and op2 in a 24 bits mask
+: >RRR  { op2 op1 ar as at op0 }
+    #3 ,                    \ compile length
+    op0
+    at   4 lshift  or
+    as   8 lshift  or
+    ar  12 lshift  or
+    op1 16 lshift  or
+    op2 20 lshift  or  ,
+    ;
+
+\ length in byte of instruction
+: RRR: ( comp: op2 op1 ar  as  at op0 -- | exec: -- mask )
+    create
+        >RRR
+        s" RRR" swap , ,
+    does>
+        @mask
+    ;
+
+
+
+
+\ Example:
+\  op2   op1    r     s     t    op0
+\ %0110 %0000 %0000 %0001 %0000 %0000  RRR: ABS
+
+
+
+\ +------------------------------------------------------------------------+
+\ Instructions format: ( pages 596... Xtensa.pdf )
+
+\ RRRN        15      11       7       3     0
+\             +-------+-------+-------+-------+
+\ Little End. |   r   |   s   |   t   |  op0  |
+\             +-------+-------+-------+-------+
+
+: >RRRN { r s t op0 -- mask }
+    #2 ,                    \ compile length
+    op0
+    t   4 lshift  or
+    s   8 lshift  or
+    r  12 lshift  or  ,
+    ;
+
+: RRRN: ( comp: op0 length -- | exec: -- )
+    create
+        >RRRN
+        s" RRRN" swap , ,
+    does>
+        @mask
+    ;
+
+\ Example:
+\   r     s     t    op0
+\ %0000 %0000 %0000 %1010  RRRN: ADD.N                 \ Narrow Add
+
+
+\ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
 : ," 
     [char] " parse 
     dup c,
@@ -247,9 +256,9 @@ forth
 %1000 %0000 %0000 %0000 %0000 %0000  RRR: ADD           ," Add"
 %0000 %0000 %0000 %1010  RRRN: ADD.N                    ," Narrow Add"
 %0000 %1010 %0000 %0000 %0000 %0000  RRR: ADD.S         ," Add Single"
-\ ADDI
+%1100 %0000 %0000 %0010  RRI8: ADDI                     ," Add Immediate"
 %0000 %0000 %0000 %1011  RRRN: ADDI.N                   ," Narrow Add Immediate"
-\ ADDMI
+%1101 %0000 %0000 %0010  RRI8: ADDMI                    ," Add Immediate with Shift by 8"
 %1001 %0000 %0000 %0000 %0000 %0000  RRR: ADDX2         ," Add with Shift by 1"
 %1010 %0000 %0000 %0000 %0000 %0000  RRR: ADDX4         ," Add with Shift by 2"
 %1011 %0000 %0000 %0000 %0000 %0000  RRR: ADDX8         ," Add with Shift by 3"
@@ -260,230 +269,227 @@ forth
 %0001 %0010 %0000 %0000 %0000 %0000  RRR: ANDBC         ," Boolean And with Complement"
 %0000 %0000 %1000 %0000 %0000 %0000  RRR: ANY4          ," Any 4 Booleans True"
 %0000 %0000 %1010 %0000 %0000 %0000  RRR: ANY8          ," Any 8 Booleans True"
-\ BALL
-\ BANY
-\ BBC
-\ BBCI
-\ BBCI.L
-\ BBS
-\ BBSI
-\ BBSI.L
-\ BEQ
-\ BEQI
-\ BEQZ
-\ BEQZ.N
-\ BF
-\ BGE
-\ BGEI
-\ BGEU
-\ BGEUI
-\ BGEZ
-\ BLT
-\ BLTI
-\ BLTU
-\ BLTUI
-\ BLTZ
-\ BNALL
-\ BNE
-\ BNEI
-\ BNEZ
-\ BNONE
+%0100 %0000 %0000 %0111  RRI8: BALL                     ," Branch if All Bits Set"
+%1000 %0000 %0000 %0111  RRI8: BANY                     ," Branch if Any Bit Set"
+%0101 %0000 %0000 %0111  RRI8: BBC                      ," Branch if Bit Clear"
+%0111 %0000 %0000 %0111  RRI8: BBCI                     ," Branch if Bit Clear Immediate" \ @TODO voir cas bbi4
+%0111 %0000 %0000 %0111  RRI8: BBCI.L                   ," Branch if Bit Clear Immediate LE"
+%1101 %0000 %0000 %0111  RRI8: BBS                      ," Branch if Bit Set"
+%1111 %0000 %0000 %0111  RRI8: BBSI                     ," Branch if Bit Set Immediate"
+%1111 %0000 %0000 %0111  RRI8: BBSI.L                   ," Branch if Bit Set Immediate LE"
+%0001 %0000 %0000 %0111  RRI8: BEQ                      ," Branch if Equal"
+%0000 %0000 %0010 %0110  RRI8: BEQI                     ," Branch if Equal Immediate"
+\ BEQZ      ," "
+\ BEQZ.N    ," "
+%0000 %0000 %0111 %0110  RRI8: BF                       ," Branch if False"
+%1010 %0000 %0000 %0111  RRI8: BGE                      ," Branch if Greater Than or Equal"
+\ BGEI      ," "
+%1011 %0000 %0000 %0111  RRI8: BGEU                     ," Branch if Greater Than or Equal Unsigned"
+\ BGEUI     ," "
+\ BGEZ      ," "
+%0010 %0000 %0000 %0111  RRI8: BLT                      ," Branch if Less Than"
+\ BLTI      ," "
+%0011 %0000 %0000 %0111  RRI8: BLTU                     ," Branch if Less Than Unsigned"
+\ BLTUI     ," "
+\ BLTZ      ," "
+%1100 %0000 %0000 %0111  RRI8: BNALL                    ," Branch if Not-All Bits Set"
+%1001 %0000 %0000 %0111  RRI8: BNE                      ," Branch if Not Equal"
+\ BNEI      ," "
+\ BNEZ      ," "
+%0000 %0000 %0000 %0111  RRI8: BNONE                    ," Branch if No Bit Set"
 %0000 %0000 %0100 %0000 %0000 %0000  RRR: BREAK         ," Breakpoint %0100 b12..b15"
-\ BT
-%00 %0101  CALL: CALL0             ," Non-windowed Call"
-%01 %0101  CALL: CALL4             ," Call PC-relative, Rotate Window by 4"
-%10 %0101  CALL: CALL8             ," Call PC-relative, Rotate Window by 8"
-%11 %0101  CALL: CALL12            ," Call PC-relative, Rotate Window by 12"
-
+%0001 %0000 %0111 %0110  RRI8: BT                       ," Branch if True"
+%00 %0101  CALL: CALL0                                  ," Non-windowed Call"
+%01 %0101  CALL: CALL4                                  ," Call PC-relative, Rotate Window by 4"
+%10 %0101  CALL: CALL8                                  ," Call PC-relative, Rotate Window by 8"
+%11 %0101  CALL: CALL12                                 ," Call PC-relative, Rotate Window by 12"
 %0000 %0000 %0000 %0000 %11 %00 %0000  CALLX: CALLX0    ," Non-windowed Call Register"
 %0000 %0000 %0000 %0000 %11 %01 %0000  CALLX: CALLX4    ," Call Register, Rotate Window by 4"
 %0000 %0000 %0000 %0000 %11 %10 %0000  CALLX: CALLX8    ," Call Register, Rotate Window by 8"
 %0000 %0000 %0000 %0000 %11 %11 %0000  CALLX: CALLX12   ," Call Register, Rotate Window by 12"
-
-
 %1011 %1010 %0000 %0000 %0000 %0000  RRR: CEIL.S        ," Ceiling Single to Fixed"
 %0011 %0011 %0000 %0000 %0000 %0000  RRR: CLAMPS        ," Signed Clamp"
-\ DHI
-\ DHU
-\ DHWB
-\ DHWBI
-\ DII
-\ DIU
-\ DIWB
-\ DIWBI
-\ DPFL
-\ DPFT
-\ DPFRO
-\ DPFW
-\ DPFWO
-
-%0000 %0000 %0010 %0000 %0011 %0000  RRR: DSYNC ," ..."
-\ ENTRY
-\ ESYNC
-\ EXCW
-\ EXTUI
-\ EXTW
-\ FLOAT.S
-\ FLOOR.S
-\ IDTLB
-\ IHI
-\ IHU
-\ III
-\ IITLB
-\ IIU
-\ ILL
-\ ILL.N
-\ IPF
-\ IPFL
-\ ISYNC
+%0111 %0000 %0110 %0010  RRI8: DHI                      ," Data Cache Hit Invalidate"
+\ DHU       ," Data Cache Hit Unlock"
+\ DHWB      ," Data Cache Hit Writeback"
+\ DHWBI     ," Data Cache Hit Writeback Invalidate"
+\ DII       ," Data Cache Index Invalidate"
+\ DIU       ," Data Cache Index Unlock"
+\ DIWB      ," Data Cache Index Write Back"
+\ DIWBI     ," Data Cache Index Write Back Invalidate"
+\ DPFL      ," Data Cache Prefetch and Lock"
+\ DPFR      ," Data Cache Prefetch for Read"
+%0111 %0000 %0010 %0010  RRI8: DPFRO                    ," Data Cache Prefetch for Read Once"
+\ DPFT      ," Data Cache Prefetch for Read"
+\ DPFW      ," Data Cache Prefetch for Write"
+\ DPFWO     ," Data Cache Prefetch for Write Once"
+%0000 %0000 %0010 %0000 %0011 %0000  RRR: DSYNC         ," Load/Store Synchronize"
+\ ENTRY     ," Subroutine Entry"
+%0000 %0000 %0000 %0010 %0000 %0000  RRR: ESYNC         ," Execute Synchronize"
+%0000 %0000 %0010 %0010 %1000 %0000  RRR: EXCW          ," Exception Wait"
+\ EXTUI     ," Extract Unsigned Immediate"
+%0000 %0000 %0010 %0000 %1101 %0000  RRR: EXTW          ," External Wait"
+%1100 %1010 %0010 %0000 %0000 %0000  RRR: FLOAT.S       ," Convert Fixed to Single"
+%1010 %1010 %0010 %0000 %0000 %0000  RRR: FLOOR.S       ," Floor Single to Fixed"
+%0101 %0000 %1100 %0000 %0000 %0000  RRR: IDTLB         ," Invalidate Data TLB Entry"
+\ IHI       ," Instruction Cache Hit Invalidate"
+\ IHU       ," Instruction Cache Hit Unlock"
+\ III       ," Instruction Cache Index Invalidate"
+%0101 %0000 %0100 %0000 %0000 %0000  RRR: IITLB         ," Invalidate Instruction TLB Entry"
+\ IIU       ," "
+%0000 %0000 %0000 %0000 %00 %00 %0000  CALLX: ILL       ," Illegal Instruction"
+%1111 %0000 %0110 %1101  RRRN: ILL.N                    ," Narrow Illegal Instruction"
+\ IPF       ," "
+\ IPFL      ," "
+%0000 %0000 %0001 %0000 %0000 %0000  RRR: ISYNC         ," Instruction Fetch Synchronize"
 %00 %0110  CALL: J                                      ," Unconditional Jump"
-\ J.L
-\ JX
-\ L8UI
-\ L16SI
-\ L16UI
-\ L32AI
-\ L32E
-\ L32I
-\ L32I.N
-\ L32R
-\ LDCT
-\ LDDEC
-\ LDINC
-\ LICT
-\ LICW
-\ LOOP
-\ LOOPGTZ
-\ LOOPNEZ
-\ LSI
-\ LSIU
-\ LSX
-\ LSXU
-\ MADD.S
-%0101 %0011 %0000 %0000 %0000 %0000  RRR: MAX       ," Maximum Value"
-\ MAXU
-\ MEMW
-%0100 %0011 %0000 %0000 %0000 %0000  RRR: MIN       ," Minimum Value"
-%0110 %0011 %0000 %0000 %0000 %0000  RRR: MINU      ," Minimum Value Unsigned"
-%0010 %0000 %0000 %0000 %0000 %0000  RRR: MOV       ," Move"
-%0000 %0000 %0000 %1101  RRRN: MOV.N                ," Narrow Move"
-%1111 %1010 %0000 %0000 %0000 %0000  RRR: MOV.S     ," Move Single"
-\ MOVEQZ
-\ MOVEQZ.S
-\ MOVF
-\ MOVF.S
-\ MOVGEZ
-\ MOVGEZ.S
-\ MOVI
-\ MOVI.N
-\ MOVLTZ
-\ MOVLTZ.S
-\ MOVNEZ
-\ MOVNEZ.S
-\ MOVSP
-\ MOVT
-\ MOVT.S
-\ MSUB.S
-\ MUL.AA
-\ MUL.AD
-\ MUL.DA
-\ MUL.DD
-\ MUL.S
-\ MUL16S
-\ MUL16U
-\ MULA.AA
-\ MULA.AD
-\ MULA.DA
-\ MULA.DD
-\ MULL
-\ MULS.AA
-\ MULS.AD
-\ MULS.DA
-\ MULS.DD
-\ MULSH
-\ MULUH
-\ NEG
-\ NEG.S
-\ NOP
-\ NOP.N
-\ NSA
-\ NSAU
-\ OEQ.S
-\ OLE.S
-\ OLT.S
-\ OR
-\ ORB
-\ ORBC
-\ PDLTB
-\ PITLB
-\ QUOS
-\ QUOU
-\ RDTLB0
-\ RDTLB1
-\ REMS
-\ REMU
-\ RER
-\ RET
-\ RET.N
-\ RETW
-\ RETW.N
-\ RFFD
-\ RFDE
-\ RFDO
-\ RFE
-\ RFI \0..15
-\ RFME
-\ RFR
-\ RFUE
-\ RFWO
-\ RFWU
-\ RITBLB0
-\ RITBLB1
-\ ROTW
-\ ROUND.S
-\ RSIL
-\ RSR.*
-\ RSR
-\ RSRat
-\ RSYNC
-\ RUR
-\ RUR.*
-\ S8I
-\ S16I
-\ S32C1I
-\ S32E
-\ S32I
-\ S32I.N
-\ S32RI
-\ SDCT
-\ SEXT
-\ SICT
-\ SICW
-\ SIMCALL
-\ SLL
-\ SLLI
-\ SRA
-\ SRAI
-\ SRC
-\ SRL
-\ SRLI
-\ SSA8B
-\ SSA8L
-\ SSAI
-\ SSI
-\ SSIU
-\ SSL
-\ SSR
-\ SSX
-\ SSXU
-\ SUB
-\ SUB.S
-\ SUBX2
-\ SUBX4
-\ SYSCALL
-\ TRUNC.S
-\ UEQ.S
-\ UFLOAT
+\ J.L   is an assembler macro which generates exactly a J instruction
+%0000 %0000 %0000 %0000 %10 %10 %0000  CALLX: JX        ," Unconditional Jump Register"
+\ L8UI  ," "
+\ L16SI  ," "
+\ L16UI  ," "
+\ L32AI  ," "
+\ L32E  ," "
+\ L32I  ," "
+\ L32I.N  ," "
+\ L32R  ," "
+%1111 %0001 %1000 %0000 %0000 %0000  RRR: LDCT          ," Load Data Cache Tag"
+%1001 %0000 %1000 %0000 %0000 %0100  RRR: LDDEC         ," Load with Autodecrement"
+%1000 %0000 %0000 %0000 %0000 %0100  RRR: LDINC         ," Load with Autoincrement"
+%1111 %0001 %0000 %0000 %0000 %0000  RRR: LICT          ," Load Instruction Cache Tag"
+%1111 %0001 %0010 %0000 %0000 %0000  RRR: LICW          ," Load Instruction Cache Word"
+\ LOOP  ," Loop"
+\ LOOPGTZ  ," Loop if Greater Than Zero"
+\ LOOPNEZ  ," Loop if Not-Equal Zero"
+\ LSI  ," Load Single Immediate"
+\ LSIU  ," Load Single Immediate with Update"
+%0000 %1000 %0000 %0000 %0000 %0000  RRR: LSX           ," Load Single Indexed"
+%0001 %1000 %0000 %0000 %0000 %0000  RRR: LSXU          ," Load Single Indexed with Update"
+%0100 %1010 %0000 %0000 %0000 %0000  RRR: MADD.S        ," Multiply and Add Single"
+%0101 %0011 %0000 %0000 %0000 %0000  RRR: MAX           ," Maximum Value"
+%0111 %0011 %0000 %0000 %0000 %0000  RRR: MAXU          ," Maximum Value Unsigned"
+%0000 %0000 %0010 %0000 %1100 %0000  RRR: MEMW          ," Memory Wait"
+%0100 %0011 %0000 %0000 %0000 %0000  RRR: MIN           ," Minimum Value"
+%0110 %0011 %0000 %0000 %0000 %0000  RRR: MINU          ," Minimum Value Unsigned"
+%0010 %0000 %0000 %0000 %0000 %0000  RRR: MOV           ," Move"
+%0000 %0000 %0000 %1101  RRRN: MOV.N                    ," Narrow Move"
+%1111 %1010 %0000 %0000 %0000 %0000  RRR: MOV.S         ," Move Single"
+\ MOVEQZ    ," "
+\ MOVEQZ.S    ," "
+\ MOVF    ," "
+\ MOVF.S    ," "
+\ MOVGEZ    ," "
+\ MOVGEZ.S    ," "
+\ MOVI    ," "
+\ MOVI.N    ," "
+\ MOVLTZ    ," "
+\ MOVLTZ.S    ," "
+\ MOVNEZ    ," "
+\ MOVNEZ.S    ," "
+\ MOVSP    ," "
+\ MOVT    ," "
+\ MOVT.S    ," "
+\ MSUB.S    ," "
+\ MUL.AA    ," "
+\ MUL.AD    ," "
+\ MUL.DA    ," "
+\ MUL.DD    ," "
+\ MUL.S    ," "
+\ MUL16S    ," "
+\ MUL16U    ," "
+\ MULA.AA    ," "
+\ MULA.AD    ," "
+\ MULA.DA    ," "
+\ MULA.DD    ," "
+\ MULL    ," "
+\ MULS.AA    ," "
+\ MULS.AD    ," "
+\ MULS.DA    ," "
+\ MULS.DD    ," "
+\ MULSH    ," "
+\ MULUH    ," "
+\ NEG    ," "
+\ NEG.S    ," "
+\ NOP    ," "
+\ NOP.N    ," "
+\ NSA    ," "
+\ NSAU    ," "
+\ OEQ.S    ," "
+\ OLE.S    ," "
+\ OLT.S    ," "
+%0010 %0000 %0000 %0000 %0000 %0000  RRR: OR            ," Bitwise Logical Or"
+%0010 %0010 %0000 %0000 %0000 %0000  RRR: ORB           ," Boolean Or"
+%0011 %0010 %0000 %0000 %0000 %0000  RRR: ORBC          ," Boolean Or with Complement"
+%0101 %0000 %1101 %0000 %0000 %0000  RRR: PDLTB         ," Probe Data TLB"
+%0101 %0000 %0101 %0000 %0000 %0000  RRR: PITLB         ," Probe Instruction TLB"
+%1101 %0010 %0000 %0000 %0000 %0000  RRR: QUOS          ," Quotient Signed"
+%1100 %0010 %0000 %0000 %0000 %0000  RRR: QUOU          ," Quotient Unsigned"
+%0101 %0000 %1011 %0000 %0000 %0000  RRR: RDTLB0        ," Read Data TLB Entry Virtual"
+%0101 %0000 %1111 %0000 %0000 %0000  RRR: RDTLB1        ," Read Data TLB Entry Translation"
+%1111 %0010 %0000 %0000 %0000 %0000  RRR: REMS          ," Remainder Signed"
+%1110 %0010 %0000 %0000 %0000 %0000  RRR: REMU          ," Remainder Unsigned"
+%0100 %0000 %0110 %0000 %0000 %0000  RRR: RER           ," Read External Register"
+%0000 %0000 %0000 %0000 %10 %00 %0000  CALLX: RET       ," Non-Windowed Return"
+%1111 %0000 %0000 %1101  RRRN: RET.N                    ," Narrow Non-Windowed Return"
+%0000 %0000 %0000 %0000 %10 %01 %0000  CALLX: RETW      ," Windowed Return"
+\ RETW.N    ," "
+\ RFFD    ," "
+\ RFDE    ," "
+\ RFDO    ," "
+\ RFE    ," "
+\ RFI     ," "
+\ RFME    ," "
+\ RFR    ," "
+\ RFUE    ," "
+\ RFWO    ," "
+\ RFWU    ," "
+\ RITBLB0    ," "
+\ RITBLB1    ," "
+\ ROTW    ," "
+\ ROUND.S    ," "
+\ RSIL    ," "
+\ RSR.*    ," "
+\ RSR    ," "
+\ RSRat    ," "
+\ RSYNC    ," "
+\ RUR    ," "
+\ RUR.*    ," "
+\ S8I    ," "
+\ S16I    ," "
+\ S32C1I    ," "
+\ S32E    ," "
+\ S32I    ," "
+\ S32I.N    ," "
+\ S32RI    ," "
+\ SDCT    ," "
+\ SEXT    ," "
+\ SICT    ," "
+\ SICW    ," "
+\ SIMCALL    ," "
+\ SLL    ," "
+\ SLLI    ," "
+\ SRA    ," "
+\ SRAI    ," "
+\ SRC    ," "
+\ SRL    ," "
+\ SRLI    ," "
+\ SSA8B    ," "
+\ SSA8L    ," "
+\ SSAI    ," "
+\ SSI    ," "
+\ SSIU    ," "
+\ SSL    ," "
+\ SSR    ," "
+\ SSX    ," "
+\ SSXU    ," "
+\ SUB    ," "
+\ SUB.S    ," "
+\ SUBX2    ," "
+\ SUBX4    ," "
+\ SYSCALL    ," "
+\ TRUNC.S    ," "
+\ UEQ.S    ," "
+\ UFLOAT    ," "
 \ ULE.S     ," Compare Single Unord or Less Than or Equal"
 \ ULT.S     ," Compare Single Unordered or Less Than"
 \ UMUL.AA.* ," Unsigned Multiply"
@@ -494,51 +500,14 @@ forth
 %0100 %0000 %0111 %0000 %0000 %0000  RRR: WER           ," Write External Register"
 \ WFR       ," Move AR to FR"
 \ WITLB     ," Write Instruction TLB Entry"
-\ WSR.*
+\ WSR.*    ," "
 \ WSR       ," Write Special Register"
-\ WUR.*
+\ WUR.*    ," "
 \ WUR       ," Write User Register
 %0011 %0000 %0000 %0000 %0000 %0000  RRR: XOR           ," Bitwise Logical Exclusive Or"
 \ XORB      ," Boolean Exclusive Or"
-\ XSR.*
+\ XSR.*    ," "
 \ XSR       ," Exchange Special Register"
-
-
-
-
-
-
-
-
-
-
-\ +------------------------------------------------------------------------+
-\ Instructions format: ( pages 594... Xtensa.pdf )
-
-\ RRI8        23              15      11       7       3     0
-\             +-------+-------+-------+-------+-------+-------+
-\ Little End. |     imm8      | 1100  |   s   |   t   |  0010 |
-\             +-------+-------+-------+-------+-------+-------+
-
-: (RRI8) { op0 -- mask }
-    ;
-
-: RRI8: ( comp: op0 op1 length -- | exec: -- )
-    create
-        , , ,
-    does>
-        (RRI8)
-    ;
-
-\ ADDI \ Add Immediate
-\ ADDMI \ Add Immediate with Shift by 8
-\ %0111 %0100  RRI8: BALL             \ Branch if All Bits Set
-
-
-
-
-\  = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-include ESP32listINSTR.txt
 
 
 
