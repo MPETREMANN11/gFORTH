@@ -1,0 +1,71 @@
+\ *********************************************************************
+\ build x y array for double integers
+\   Filename:       2array.txt
+\   author:         Marc PETREMANN
+    Date:           07 july 2021
+\   MCU:            gForth
+\   GNU General Public License
+\ *********************************************************************
+
+
+\ use:
+\
+\ create array x = 20 and  y = 10  double cells:
+\   20 10 xyDarray TEST
+\
+\ after, 
+\   dx value must be in range   0..x-1
+\   dy value must be in range   0..y-1,
+\
+\ example:
+\  1. 0 0  TEST  2!     \ store double 1. in 0 0 pos in TEST array
+\     0 0  TEST  2@     \ fetch double int from 0 0 pos in TEST array
+
+
+\ get x size of current array
+: getX ( addr -- x )
+    @
+    ;
+
+\ get y size of current array
+: getY ( addr -- x )
+    cell + @
+    ;
+
+\ abort id x or y out of range
+: testOutOfRange { dx dy addr -- }
+    dx 1+ addr getX >           \ test if dx>x
+    if  ." dx out of range " abort   then
+    dy 1+ addr getY >           \ test if dy>y
+    if  ." dy out of range " abort   then
+    ;
+
+: calcXYoffset { dx dy addr -- offset }
+    dx addr getX *      
+    cell 2* *           \ calculate X offset
+    dy cell 2* *  +     \ add Y offset
+    ;
+    
+\ get real address of Dvalue
+: getDarrayAddr { dx dy addr -- addr' }
+    dx dy addr testOutOfRange
+    dx dy addr calcXYoffset
+    addr +
+    ;
+
+\ create xy size array for double integers
+: xyDarray  ( comp: x y -- <name> | exec: dx dy -- addr )
+    create
+        2dup
+        swap , ,        \ store x and y in first cells
+        *               \ calculate size of array
+        cell 2* *       \ calc. real size for double ints
+        allot           \ allocate size in memory
+    does>
+        getDarrayAddr
+        cell + cell +
+    ;
+
+
+
+
